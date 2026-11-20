@@ -1,0 +1,10 @@
+{
+    "display_name": "Status Effects",
+    "loading_order": 100,
+    "js": "index.js",
+    "css": "style.css",
+    "author": "Ordelia",
+    "version": "1.0.0",
+    "homePage": "",
+    "auto_update": false
+}
