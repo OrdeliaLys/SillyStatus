@@ -5,7 +5,9 @@
 // effect started, changed or ended. The current effects are also sent to
 // the AI with every prompt so it can play them at the right stage.
 
-import { VISUALS, isVisual, visualLabel, guessVisual, renderVisuals } from './visuals.js';
+import { VISUALS, VISUALS_VERSION, isVisual, visualLabel, guessVisual, renderVisuals } from './visuals.js';
+
+const VERSION = '1.2.1';
 
 const MODULE = 'status_effects';
 const PROMPT_KEY = 'status_effects_panel';
@@ -551,6 +553,49 @@ function refresh() {
     updateVisuals();
 }
 
+// ---------- diagnostics ----------
+
+async function diagnose() {
+    const s = settings();
+    const lines = [];
+    let manifestVersion = '?';
+    try {
+        const res = await fetch(new URL('./manifest.json', import.meta.url), { cache: 'no-store' });
+        manifestVersion = (await res.json()).version;
+    } catch (err) {
+        manifestVersion = `error: ${err.message}`;
+    }
+    lines.push(`code ${VERSION} / visuals ${VISUALS_VERSION ?? 'old'} / installed ${manifestVersion}`);
+    lines.push(`enabled ${s.enabled}, visuals ${s.visuals}, layer ${s.layer}, strength ${s.visualStrength}%, animate ${s.animate}`);
+    lines.push(`preview ${preview ? `${preview.key} ${preview.i}` : 'off'}, chat open ${hasChat()}`);
+    const root = document.getElementById('sfx-fx-root');
+    if (!root) {
+        lines.push('effect layer: missing');
+    } else {
+        const cs = getComputedStyle(root);
+        const r = root.getBoundingClientRect();
+        lines.push(`effect layer: display ${cs.display}, z ${cs.zIndex}, opacity ${cs.opacity}, size ${Math.round(r.width)}x${Math.round(r.height)}, class "${root.className}"`);
+        for (const el of root.querySelectorAll('.sfx-fx')) {
+            const before = getComputedStyle(el, '::before');
+            lines.push(`  ${el.className.replace('sfx-fx ', '')}: opacity ${getComputedStyle(el).opacity}, before ${before.backgroundImage === 'none' ? 'no image' : 'has image'} ${before.animationName}`);
+        }
+        root.style.pointerEvents = 'auto';
+        const hit = document.elementFromPoint(innerWidth / 2, innerHeight / 2);
+        root.style.pointerEvents = '';
+        const name = el => el ? `${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}${el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/).slice(0, 2).join('.') : ''}` : 'nothing';
+        lines.push(`on top at screen centre: ${name(hit)}`);
+        let el = hit;
+        const chain = [];
+        while (el && el !== document.body && chain.length < 6) {
+            const z = getComputedStyle(el).zIndex;
+            if (z !== 'auto') chain.push(`${name(el)} z${z}`);
+            el = el.parentElement;
+        }
+        if (chain.length) lines.push(`  stacking: ${chain.join(' < ')}`);
+    }
+    return lines.join('\n');
+}
+
 // ---------- settings UI ----------
 
 function buildSettings() {
@@ -562,7 +607,7 @@ function buildSettings() {
     wrap.innerHTML = `
         <div class="inline-drawer">
             <div class="inline-drawer-toggle inline-drawer-header">
-                <b>Status Effects</b>
+                <b>Status Effects <small>v${VERSION}</small></b>
                 <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
             </div>
             <div class="inline-drawer-content">
@@ -598,7 +643,9 @@ function buildSettings() {
                     <div class="sfx-actions">
                         <button type="button" class="menu_button" id="sfx-preview-go">Show</button>
                         <button type="button" class="menu_button" id="sfx-preview-stop">Stop</button>
+                        <button type="button" class="menu_button" id="sfx-diagnose">Diagnose</button>
                     </div>
+                    <pre id="sfx-diag" class="sfx-diag" hidden></pre>
                 </div>
             </div>
         </div>`;
@@ -630,6 +677,11 @@ function buildSettings() {
     wrap.querySelector('#sfx-preview-go').addEventListener('click', startPreview);
     wrap.querySelector('#sfx-preview-key').addEventListener('change', () => preview && startPreview());
     wrap.querySelector('#sfx-preview-i').addEventListener('input', () => preview && startPreview());
+    wrap.querySelector('#sfx-diagnose').addEventListener('click', async () => {
+        const out = wrap.querySelector('#sfx-diag');
+        out.hidden = false;
+        out.textContent = await diagnose();
+    });
     wrap.querySelector('#sfx-preview-stop').addEventListener('click', () => {
         preview = null;
         updateVisuals();
