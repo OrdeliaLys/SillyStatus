@@ -7,7 +7,7 @@
 
 import { VISUALS, VISUALS_VERSION, isVisual, visualLabel, guessVisual, renderVisuals } from './visuals.js';
 
-const VERSION = '1.2.1';
+const VERSION = '1.2.2';
 
 const MODULE = 'status_effects';
 const PROMPT_KEY = 'status_effects_panel';

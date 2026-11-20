@@ -4,7 +4,7 @@
 // which sets how visible the layer is, how fast it moves and, for some,
 // how many particles appear.
 
-export const VISUALS_VERSION = '1.2.1';
+export const VISUALS_VERSION = '1.2.2';
 
 export const VISUALS = [
     { key: 'spiral', label: 'Hypnotic spiral', hint: 'hypnosis, trance, suggestion, mind control', words: ['hypno', 'trance', 'mesmer', 'pendulum', 'suggestion', 'mind control', 'brainwash', 'obedien'], min: 0.05, max: 0.38, slow: 70, fast: 9 },

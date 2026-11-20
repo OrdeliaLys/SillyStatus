@@ -225,11 +225,20 @@
 
 #sfx-fx-root {
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    right: auto;
+    bottom: auto;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
     z-index: 1;
     pointer-events: none;
     overflow: hidden;
-    contain: strict;
+    contain: layout paint;
 }
 
 /* Over-the-chat mode: above messages, below the panel and menus, softened so text stays readable. */
@@ -240,7 +249,10 @@
 
 .sfx-fx {
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     pointer-events: none;
     transition: opacity 1.2s ease;
 }
