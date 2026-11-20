@@ -5,9 +5,9 @@
 // effect started, changed or ended. The current effects are also sent to
 // the AI with every prompt so it can play them at the right stage.
 
-import { VISUALS, VISUALS_VERSION, isVisual, visualLabel, guessVisual, renderVisuals } from './visuals.js';
+import { VISUALS, VISUALS_VERSION, isVisual, visualLabel, guessVisual, renderVisuals, tintInfo } from './visuals.js';
 
-const VERSION = '1.2.2';
+const VERSION = '1.3.0';
 
 const MODULE = 'status_effects';
 const PROMPT_KEY = 'status_effects_panel';
@@ -24,7 +24,7 @@ const DEFAULTS = {
     visuals: true,
     visualStrength: 100,
     animate: true,
-    layer: 'over',
+    placement: 'auto',
 };
 
 const CHECK_PROMPT = `You keep the status-effect tracker for an ongoing roleplay. You read the newest part of the story and report which tracked effects started, changed or ended. You never write story text.
@@ -65,6 +65,7 @@ function ctx() {
 
 function settings() {
     const store = ctx().extensionSettings;
+    if (store[MODULE] && 'layer' in store[MODULE]) delete store[MODULE].layer;
     if (!store[MODULE] || typeof store[MODULE] !== 'object') store[MODULE] = structuredClone(DEFAULTS);
     const s = store[MODULE];
     for (const [k, v] of Object.entries(DEFAULTS)) if (s[k] === undefined) s[k] = v;
@@ -543,7 +544,7 @@ function updateVisuals() {
     if (preview) best.set(preview.key, preview.i);
     const active = [...best].map(([key, i]) => ({ key, i }));
     if (preview) active.sort((a, b) => (b.key === preview.key) - (a.key === preview.key));
-    renderVisuals(active, { strength: s.visualStrength / 100, animate: s.animate, over: s.layer !== 'behind' });
+    renderVisuals(active, { strength: s.visualStrength / 100, animate: s.animate, placement: s.placement });
 }
 
 function refresh() {
@@ -566,9 +567,16 @@ async function diagnose() {
         manifestVersion = `error: ${err.message}`;
     }
     lines.push(`code ${VERSION} / visuals ${VISUALS_VERSION ?? 'old'} / installed ${manifestVersion}`);
-    lines.push(`enabled ${s.enabled}, visuals ${s.visuals}, layer ${s.layer}, strength ${s.visualStrength}%, animate ${s.animate}`);
+    lines.push(`enabled ${s.enabled}, visuals ${s.visuals}, placement ${s.placement}, strength ${s.visualStrength}%, animate ${s.animate}, chat tint ${tintInfo()}`);
     lines.push(`preview ${preview ? `${preview.key} ${preview.i}` : 'off'}, chat open ${hasChat()}`);
-    const root = document.getElementById('sfx-fx-root');
+    for (const id of ['sfx-fx-under', 'sfx-fx-root']) {
+        const r = document.getElementById(id);
+        if (!r) { lines.push(`${id}: not created yet`); continue; }
+        const cs = getComputedStyle(r);
+        const b = r.getBoundingClientRect();
+        lines.push(`${id}: z ${cs.zIndex}, size ${Math.round(b.width)}x${Math.round(b.height)}, layers ${r.querySelectorAll('.sfx-fx').length}`);
+    }
+    const root = document.getElementById('sfx-fx-root') ?? document.getElementById('sfx-fx-under');
     if (!root) {
         lines.push('effect layer: missing');
     } else {
@@ -626,10 +634,11 @@ function buildSettings() {
                 <hr>
                 <label class="checkbox_label"><input type="checkbox" data-key="visuals"> Screen effects behind the chat</label>
                 <label class="checkbox_label"><input type="checkbox" data-key="animate"> Animate screen effects</label>
-                <label>Draw screen effects
-                    <select class="text_pole" data-key="layer">
-                        <option value="over">Over the chat (always visible)</option>
-                        <option value="behind">Behind the chat (needs a see-through chat background)</option>
+                <label>Where screen effects go
+                    <select class="text_pole" data-key="placement">
+                        <option value="auto">Each effect's best spot (recommended)</option>
+                        <option value="under">All under the messages</option>
+                        <option value="over">All over the messages</option>
                     </select>
                 </label>
                 <label>Screen effect strength <span id="sfx-strength-val"></span>

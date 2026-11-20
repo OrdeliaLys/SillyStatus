@@ -223,7 +223,7 @@
 
 /* ---------- Screen visuals (drawn behind the chat) ---------- */
 
-#sfx-fx-root {
+.sfx-fx-layer {
     position: fixed;
     top: 0;
     left: 0;
@@ -235,16 +235,30 @@
     min-height: 100vh;
     margin: 0;
     padding: 0;
-    z-index: 1;
     pointer-events: none;
     overflow: hidden;
     contain: layout paint;
 }
 
-/* Over-the-chat mode: above messages, below the panel and menus, softened so text stays readable. */
-#sfx-fx-root.sfx-over {
+/* Under the messages: above the page background, below the chat (z 30). */
+.sfx-fx-layer.sfx-under {
+    z-index: 1;
+}
+
+/* Over the messages: below the panel and menus, softened so text stays readable. */
+.sfx-fx-layer.sfx-over {
     z-index: 32;
     opacity: 0.88;
+}
+
+/* Copy of the chat's own background tint, drawn below the effects. */
+.sfx-tint {
+    position: absolute;
+    pointer-events: none;
+}
+
+.sfx-tint[hidden] {
+    display: none;
 }
 
 .sfx-fx {
