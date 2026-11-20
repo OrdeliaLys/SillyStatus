@@ -248,7 +248,6 @@
 /* Over the messages: below the panel and menus, softened so text stays readable. */
 .sfx-fx-layer.sfx-over {
     z-index: 32;
-    opacity: 0.88;
 }
 
 /* Copy of the chat's own background tint, drawn below the effects. */
@@ -461,7 +460,8 @@
     animation: sfx-mad var(--dur, 20s) linear infinite;
 }
 
-/* 15 drunk */
+/* 15 drunk: faint warm haze, plus the chat itself tilting and a swaying
+   double-vision ghost on the text (see .sfx-woozy below) */
 .sfx-fx-drunk::before,
 .sfx-fx-drunk::after {
     inset: -10%;
@@ -471,6 +471,30 @@
     animation: sfx-wobble var(--dur, 5s) ease-in-out infinite alternate;
 }
 .sfx-fx-drunk::after { animation-direction: alternate-reverse; opacity: 0.7; }
+
+body.sfx-woozy #chat {
+    animation: sfx-woozy-tilt var(--sfx-woozy-dur, 5s) ease-in-out infinite;
+    transform-origin: 50% 40%;
+}
+body.sfx-woozy #chat .mes_text {
+    animation: sfx-woozy-ghost calc(var(--sfx-woozy-dur, 5s) * 0.8) ease-in-out infinite;
+}
+body.sfx-woozy.sfx-still-chat #chat,
+body.sfx-woozy.sfx-still-chat #chat .mes_text {
+    animation-play-state: paused;
+}
+@keyframes sfx-woozy-tilt {
+    0%, 100% { transform: rotate(calc(var(--sfx-woozy, 0.5) * -0.9deg)) translateX(calc(var(--sfx-woozy, 0.5) * -6px)); }
+    50% { transform: rotate(calc(var(--sfx-woozy, 0.5) * 0.9deg)) translateX(calc(var(--sfx-woozy, 0.5) * 6px)); }
+}
+@keyframes sfx-woozy-ghost {
+    0%, 100% { text-shadow: calc(var(--sfx-woozy, 0.5) * -5px) calc(var(--sfx-woozy, 0.5) * 1px) 1px rgba(255, 210, 150, 0.45); }
+    50% { text-shadow: calc(var(--sfx-woozy, 0.5) * 5px) calc(var(--sfx-woozy, 0.5) * -1px) 1px rgba(255, 210, 150, 0.45); }
+}
+@media (prefers-reduced-motion: reduce) {
+    body.sfx-woozy #chat,
+    body.sfx-woozy #chat .mes_text { animation-play-state: paused; }
+}
 
 /* 16 glitch */
 .sfx-fx-glitch::before { inset: 0; background: repeating-linear-gradient(to bottom, rgba(0, 255, 220, 0.22) 0 1px, transparent 1px 4px); }
@@ -502,11 +526,18 @@
     animation: sfx-waver var(--dur, 3s) ease-in-out infinite;
 }
 
-/* 19 static */
+/* 19 static: TV snow, heavier at the edges, with a slow rolling interference bar */
 .sfx-fx-static::before {
-    inset: -60px;
-    background: var(--sfx-noise);
-    animation: sfx-jitter var(--dur, 0.4s) steps(4) infinite;
+    inset: -80px;
+    background: var(--sfx-snow);
+    -webkit-mask-image: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.45) 25%, black 80%);
+    mask-image: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.45) 25%, black 80%);
+    animation: sfx-jitter 0.35s steps(4) infinite;
+}
+.sfx-fx-static::after {
+    left: 0; right: 0; top: 0; height: 22%;
+    background: linear-gradient(transparent, rgba(220, 220, 230, 0.55) 45%, rgba(255, 255, 255, 0.75) 50%, rgba(220, 220, 230, 0.55) 55%, transparent);
+    animation: sfx-scan var(--dur, 6s) linear infinite;
 }
 
 /* 20 water */
@@ -519,8 +550,20 @@
     animation: sfx-caustic var(--dur, 12s) linear infinite;
 }
 
-/* 21 drained (greys out the background through backdrop-filter, set in JS) */
-.sfx-fx-drained::before { inset: 0; background: rgba(20, 20, 30, 0.4); opacity: var(--i, 0.5); }
+/* 21 drained: greys out and darkens everything below it (text included),
+   with a dark drip slowly sinking down the screen. Saturation is set in JS. */
+.sfx-fx-drained::before {
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 35%, rgba(5, 5, 12, 0.6) 100%);
+    opacity: var(--i, 0.5);
+}
+.sfx-fx-drained::after {
+    left: 0; right: 0; top: -100%; height: 200%;
+    background: linear-gradient(transparent 0%, rgba(8, 8, 16, 0.3) 35%, rgba(8, 8, 16, 0.3) 45%, transparent 70%);
+    opacity: var(--i, 0.5);
+    animation: sfx-sink var(--dur, 8s) linear infinite;
+}
+@keyframes sfx-sink { from { transform: translateY(0); } to { transform: translateY(50%); } }
 
 /* 22 morph */
 .sfx-fx-morph > i {

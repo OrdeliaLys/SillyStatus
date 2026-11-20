@@ -4,7 +4,7 @@
 // which sets how visible the layer is, how fast it moves and, for some,
 // how many particles appear.
 
-export const VISUALS_VERSION = '1.3.1';
+export const VISUALS_VERSION = '1.4.0';
 
 export const VISUALS = [
     { key: 'spiral', place: 'under', label: 'Hypnotic spiral', hint: 'hypnosis, trance, suggestion, mind control', words: ['hypno', 'trance', 'mesmer', 'pendulum', 'suggestion', 'mind control', 'brainwash', 'obedien'], min: 0.07, max: 0.32, slow: 22, fast: 2.6 },
@@ -21,13 +21,13 @@ export const VISUALS = [
     { key: 'corruption', place: 'under', label: 'Creeping corruption', hint: 'corruption, dark magic, taint, demonic influence', words: ['corrupt', 'taint', 'demon', 'dark magic', 'defil', 'blight', 'curse'], min: 0.1, max: 0.7, slow: 14, fast: 4 },
     { key: 'holy', place: 'under', label: 'Holy light', hint: 'blessing, divine power, purification, sanctity', words: ['bless', 'holy', 'divine', 'sanct', 'purif', 'angel', 'radian'], min: 0.06, max: 0.45, slow: 90, fast: 25 },
     { key: 'madness', place: 'under', label: 'Shifting colours', hint: 'madness, eldritch influence, insanity, hallucination', words: ['mad', 'insan', 'eldritch', 'hallucin', 'delir', 'psychede', 'unreal'], min: 0.06, max: 0.45, slow: 40, fast: 8 },
-    { key: 'drunk', place: 'under', label: 'Woozy sway', hint: 'intoxication, drugs, dizziness', words: ['drunk', 'intox', 'tipsy', 'wine', 'alcohol', 'dizz', 'drug'], min: 0.08, max: 0.5, slow: 8, fast: 2.5 },
+    { key: 'drunk', place: 'under', label: 'Woozy sway', hint: 'intoxication, drugs, dizziness, vertigo', words: ['drunk', 'intox', 'tipsy', 'wine', 'alcohol', 'dizz', 'drug'], min: 0.06, max: 0.3, slow: 7, fast: 3 },
     { key: 'glitch', place: 'over', label: 'Glitch scanlines', hint: 'technological control, programming, digital interference, implants', words: ['glitch', 'program', 'digital', 'implant', 'cyber', 'hack', 'robot', 'android', 'chip'], min: 0.08, max: 0.55, slow: 6, fast: 1.5 },
     { key: 'sparkle', place: 'under', label: 'Sparkles', hint: 'magic buff, enchantment, empowerment, glamour', words: ['enchant', 'buff', 'empower', 'glamour', 'magic', 'spell', 'fairy', 'boon'], min: 0.3, max: 0.9, slow: 5, fast: 1.8, particles: { glyph: '✦', min: 4, max: 18 } },
     { key: 'shadow', place: 'over', label: 'Shadows', hint: 'possession, shadow curse, being watched or haunted', words: ['possess', 'shadow', 'haunt', 'ghost', 'spirit', 'watched', 'stalk'], min: 0.15, max: 0.92, slow: 6, fast: 1.8 },
-    { key: 'static', place: 'over', label: 'Static', hint: 'dissociation, memory loss, numbness, emptiness', words: ['dissociat', 'memory', 'amnesi', 'forget', 'numb', 'empty', 'blank', 'hollow'], min: 0.04, max: 0.3, slow: 0.6, fast: 0.25 },
+    { key: 'static', place: 'over', always: 'over', label: 'Static', hint: 'dissociation, memory loss, numbness, emptiness', words: ['dissociat', 'memory', 'amnesi', 'forget', 'numb', 'empty', 'blank', 'hollow'], min: 0.1, max: 0.42, slow: 9, fast: 3 },
     { key: 'water', place: 'under', label: 'Underwater', hint: 'drowning, water magic, submersion, deep calm', words: ['drown', 'water', 'submer', 'ocean', 'sea', 'tide', 'mermaid', 'calm'], min: 0.1, max: 0.6, slow: 20, fast: 7 },
-    { key: 'drained', place: 'over', label: 'Drained colour', hint: 'energy drain, despair, weakness, life drain', words: ['drain', 'despair', 'weak', 'depress', 'hopeless', 'wither', 'leech'], min: 0.15, max: 1, slow: 10, fast: 4 },
+    { key: 'drained', place: 'over', always: 'over', label: 'Drained colour', hint: 'energy drain, despair, weakness, life drain', words: ['drain', 'despair', 'weak', 'depress', 'hopeless', 'wither', 'leech'], min: 0.15, max: 1, slow: 10, fast: 4 },
     { key: 'morph', place: 'under', label: 'Morphing blobs', hint: 'transformation, mutation, shapeshifting, body change', words: ['transform', 'mutat', 'shapeshift', 'morph', 'ears', 'tail', 'fur', 'scales', 'slime'], min: 0.08, max: 0.5, slow: 20, fast: 6 },
 ];
 
@@ -77,6 +77,10 @@ function spiralImage() {
     return svgUrl(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='-100 -100 200 200'><g fill='none' stroke='rgb(190,130,255)' stroke-width='5' stroke-linecap='round'>${paths}</g></svg>`);
 }
 
+function snowImage() {
+    return svgUrl("<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='s'><feTurbulence type='fractalNoise' baseFrequency='1.3' numOctaves='1' stitchTiles='stitch'/><feColorMatrix values='1.6 0 0 0 -0.3  1.6 0 0 0 -0.3  1.6 0 0 0 -0.3  0 0 0 0 1'/></filter><rect width='100%' height='100%' filter='url(#s)'/></svg>");
+}
+
 function noiseImage() {
     return svgUrl("<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  1.4 0 0 0 -0.5'/></filter><rect width='100%' height='100%' filter='url(#n)'/></svg>");
 }
@@ -91,6 +95,7 @@ function makeRoot(place) {
     r.className = `sfx-fx-layer sfx-${place}`;
     r.style.setProperty('--sfx-spiral', spiralImage());
     r.style.setProperty('--sfx-noise', noiseImage());
+    r.style.setProperty('--sfx-snow', snowImage());
     if (place === 'under') {
         const tint = document.createElement('div');
         tint.className = 'sfx-tint';
@@ -193,18 +198,18 @@ function makeLayer(v) {
     return el;
 }
 
-function applyIntensity(entry, v, i, strength) {
+function applyIntensity(entry, v, i, strength, soften = 1) {
     const { el } = entry;
     const level = Math.min(1, i * strength);
     el.style.setProperty('--i', level.toFixed(3));
     el.style.setProperty('--dur', `${(v.slow - (v.slow - v.fast) * i).toFixed(2)}s`);
     if (v.key === 'drained') {
         el.style.opacity = '1';
-        const f = `grayscale(${level.toFixed(2)}) brightness(${(1 - 0.35 * level).toFixed(2)})`;
+        const f = `grayscale(${level.toFixed(2)}) brightness(${(1 - 0.15 * level).toFixed(2)})`;
         el.style.backdropFilter = f;
         el.style.webkitBackdropFilter = f;
     } else {
-        el.style.opacity = Math.min(1, (v.min + (v.max - v.min) * i) * strength).toFixed(3);
+        el.style.opacity = Math.min(1, (v.min + (v.max - v.min) * i) * strength * soften).toFixed(3);
     }
     if (v.particles) {
         const count = Math.round(v.particles.min + (v.particles.max - v.particles.min) * i);
@@ -235,7 +240,7 @@ export function renderVisuals(active, { strength = 1, animate = true, placement 
     let anyUnder = false;
     for (const a of wanted) {
         const v = BY_KEY.get(a.key);
-        const place = placement === 'auto' ? v.place : placement;
+        const place = v.always ?? (placement === 'auto' ? v.place : placement);
         if (place === 'under') anyUnder = true;
         const box = ensureRoot(place);
         box.classList.toggle('sfx-still', !animate);
@@ -248,8 +253,21 @@ export function renderVisuals(active, { strength = 1, animate = true, placement 
         } else if (entry.el.parentElement !== box) {
             box.appendChild(entry.el);
         }
-        applyIntensity(entry, v, a.i, strength);
+        applyIntensity(entry, v, a.i, strength, place === 'over' ? 0.88 : 1);
     }
+
+    // Woozy sway also tilts the chat itself and gives the text a swaying ghost.
+    const woozy = wanted.find(a => a.key === 'drunk');
+    const body = document.body;
+    if (woozy) {
+        const amp = Math.min(1.5, woozy.i * strength);
+        body.style.setProperty('--sfx-woozy', amp.toFixed(3));
+        body.style.setProperty('--sfx-woozy-dur', `${(7 - 4 * woozy.i).toFixed(2)}s`);
+        body.classList.add('sfx-woozy');
+    } else {
+        body.classList.remove('sfx-woozy');
+    }
+    body.classList.toggle('sfx-still-chat', !animate);
     for (const r of Object.values(roots)) r?.classList.toggle('sfx-still', !animate);
 
     if (anyUnder) takeOverTint();
