@@ -29,3 +29,11 @@ Effects can also tint the screen behind the chat. There are 23 visuals, such as 
 Put a list in square brackets, separated by semicolons, in an effect's description, like `[sleep; obey; deeper]`, and those words will flash behind the chat while the effect is active. The AI adds such lists itself for mantras, commands, trigger words and intrusive thoughts.
 
 The **Converging ring** visual closes in from the edges and pulses at the centre. While it's active, the flashing words pop in the centre on each pulse instead of appearing at random.
+
+### Status icons
+
+Every effect has an icon. The AI picks one when it adds an effect, and you can choose another from the picker in the effect's edit form. Icons appear in the panel and as small badges on the latest portrait of the affected character, with a ring that fills up as the effect progresses. Tap a badge to open that effect. Turn badges off under **Extensions → Status Effects**.
+
+### Out-of-character requests
+
+Ask out of character, like `((set the hypnosis to stage 6))` or `((remove the bruise))`, and the next check applies it directly, ignoring the usual one-step limit.

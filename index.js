@@ -7,7 +7,25 @@
 
 import { VISUALS, VISUALS_VERSION, isVisual, visualLabel, guessVisual, renderVisuals, tintInfo } from './visuals.js';
 
-const VERSION = '1.6.0';
+const VERSION = '1.7.0';
+
+// Status icons: shown in the panel and on the affected character's portrait.
+const ICONS = [
+    ['🌀', 'hypnosis, trance'], ['🔔', 'trigger, conditioning'], ['🎯', 'obsession, fixation'], ['⛓️', 'control, binding'],
+    ['🧠', 'mind, memory'], ['💭', 'suggestion, thoughts'], ['💗', 'arousal, desire'], ['💘', 'love, infatuation'],
+    ['💢', 'anger, rage'], ['😨', 'fear, dread'], ['🩸', 'injury, bleeding'], ['💤', 'sleep, drowsiness'],
+    ['🤢', 'nausea, sickness'], ['☠️', 'poison, curse'], ['❄️', 'cold, ice'], ['🔥', 'fire, fever'],
+    ['😈', 'corruption, demonic'], ['😇', 'holy, blessing'], ['✨', 'magic, buff'], ['🍷', 'drunk, intoxicated'],
+    ['💫', 'dizzy, dazed'], ['⚙️', 'tech, implant'], ['👻', 'possession, haunting'], ['👁️', 'watched, madness'],
+    ['🌫️', 'dissociation, numbness'], ['🌊', 'water, drowning'], ['🥀', 'drained, weakened'], ['🧬', 'transformation'],
+    ['🐾', 'animal traits'], ['🎓', 'training, skill'], ['💪', 'strength, empowered'], ['🛡️', 'protection, ward'],
+    ['🔒', 'sealed, restricted'], ['🎭', 'disguise, persona'], ['💧', 'craving, thirst'], ['⭐', 'other'],
+];
+const ICON_FOR_VISUAL = {
+    spiral: '🌀', ring: '🔔', tunnel: '🎯', pink: '💗', hearts: '💘', red: '💢', blood: '🩸', dread: '😨',
+    fog: '💤', sickly: '🤢', frost: '❄️', fire: '🔥', corruption: '😈', holy: '😇', madness: '👁️', drunk: '🍷',
+    glitch: '⚙️', sparkle: '✨', shadow: '👻', static: '🌫️', water: '🌊', drained: '🥀', morph: '🧬',
+};
 
 const MODULE = 'status_effects';
 const PROMPT_KEY = 'status_effects_panel';
@@ -26,6 +44,7 @@ const DEFAULTS = {
     animate: true,
     placement: 'auto',
     ringVibrate: false,
+    badges: true,
 };
 
 const CHECK_PROMPT = `You keep the status-effect tracker for an ongoing roleplay. You read the newest part of the story and report which tracked effects started, changed or ended. You never write story text.
@@ -41,13 +60,15 @@ RULES
 - "target" is who it affects (a character name).
 - Remove an effect only when the story clearly ends it.
 - Refer to existing effects by their id.
+- "icon" is one emoji for the effect, ideally from this list: ${ICONS.map(([e, h]) => `${e} ${h}`).join('; ')}.
+- Follow out-of-character requests from the player (in ((double parentheses)) or marked OOC) to add, remove or change effects. For those, set any stage directly and add "ooc": true.
 - If an effect involves words (mantras, commands, trigger words, intrusive thoughts, chants, whispers), end its "effects" sentence with up to 6 short ones in square brackets separated by semicolons, like [sleep; obey; deeper]. They will flash on screen.
 - "visual" is the screen effect shown while it is active. Pick the closest from this list, or "none" if nothing fits:
 ${VISUALS.map(v => `  ${v.key}: ${v.hint}`).join('\n')}
 
 ANSWER WITH JSON ONLY, in this shape:
 {"changes": [
-  {"op": "add", "name": "Hypnotic conditioning", "target": "Name", "stage": 1, "max": 8, "effects": "Feels drowsy and pliant when hearing the pendulum chime.", "visual": "spiral", "note": "First session with the pendulum."},
+  {"op": "add", "name": "Hypnotic conditioning", "target": "Name", "stage": 1, "max": 8, "effects": "Feels drowsy and pliant when hearing the pendulum chime.", "visual": "spiral", "icon": "🌀", "note": "First session with the pendulum."},
   {"op": "update", "id": "e1", "stage": 3, "effects": "...", "note": "Why it changed."},
   {"op": "remove", "id": "e2", "note": "Why it ended."}
 ]}`;
@@ -121,6 +142,17 @@ function pickVisual(requested, fallbackText) {
     if (requested === 'none') return 'none';
     if (isVisual(requested)) return requested;
     return guessVisual(fallbackText) ?? 'none';
+}
+
+// One emoji (or a couple of characters). Anything longer is ignored.
+function cleanIcon(value) {
+    const t = String(value ?? '').trim();
+    if (!t || t === 'auto' || [...t].length > 4) return '';
+    return t;
+}
+
+function iconOf(e) {
+    return cleanIcon(e.icon) || ICON_FOR_VISUAL[visualOf(e)] || '⭐';
 }
 
 // The visual an effect shows. 'auto' or missing means guess from its text.
@@ -246,6 +278,7 @@ function applyChanges(before, changes, maxStep) {
                 max,
                 effects: text(ch.effects, 300),
                 visual: pickVisual(ch.visual, `${name} ${ch.effects ?? ''}`),
+                icon: cleanIcon(ch.icon),
                 note: text(ch.note, 200),
             });
             log.push(`New: ${name}`);
@@ -256,12 +289,13 @@ function applyChanges(before, changes, maxStep) {
             if (ch.max !== undefined) e.max = clampInt(ch.max, 2, 20, e.max);
             if (ch.stage !== undefined) {
                 let stage = clampInt(ch.stage, 0, e.max, e.stage);
-                if (maxStep > 0) stage = Math.max(oldStage - maxStep, Math.min(oldStage + maxStep, stage));
+                if (maxStep > 0 && !ch.ooc) stage = Math.max(oldStage - maxStep, Math.min(oldStage + maxStep, stage));
                 e.stage = stage;
             }
             e.stage = Math.min(e.stage, e.max);
             if (ch.effects) e.effects = text(ch.effects, 300);
             if (ch.visual && (isVisual(ch.visual) || ch.visual === 'none')) e.visual = ch.visual;
+            if (cleanIcon(ch.icon)) e.icon = cleanIcon(ch.icon);
             if (ch.note) e.note = text(ch.note, 200);
             if (e.stage !== oldStage) log.push(`${e.name}: ${oldStage} → ${e.stage}/${e.max}`);
         } else if (op === 'remove') {
@@ -327,7 +361,7 @@ function updateInjection(list) {
         c.setExtensionPrompt(PROMPT_KEY, '', IN_CHAT, 0);
         return;
     }
-    let note = '[Status effects are tracked by a panel outside the chat. Never write tracker lines or stage numbers in the reply.';
+    let note = '[Status effects are tracked by a panel outside the chat. Never write tracker lines or stage numbers in the reply. Words in [brackets] are an effect\'s trigger words, mantras or intrusive thoughts.';
     if (list.length) {
         note += ' Currently active, play each at its stage when relevant:\n'
             + list.map(e => `- ${e.name}${e.target ? ` (on ${e.target})` : ''}: stage ${e.stage}/${e.max}. ${e.effects}`).join('\n');
@@ -372,7 +406,7 @@ function effectHtml(e) {
     const open = openId === e.id;
     let html = `<div class="sfx-item${open ? ' sfx-open' : ''}" data-id="${escapeHtml(e.id)}">
         <button type="button" class="sfx-row" data-act="toggle">
-            <span class="sfx-name">${escapeHtml(e.name)}</span>
+            <span class="sfx-name"><span class="sfx-icon">${escapeHtml(iconOf(e))}</span> ${escapeHtml(e.name)}</span>
             <span class="sfx-stage">${e.stage}/${e.max}</span>
             <span class="sfx-bar"><span style="width:${pct}%"></span></span>
             ${e.target ? `<span class="sfx-target">${escapeHtml(e.target)}</span>` : ''}
@@ -410,6 +444,14 @@ function formHtml(e) {
         </div>
         <label>What it does now<textarea class="text_pole" name="effects" rows="3" maxlength="300">${escapeHtml(v.effects)}</textarea></label>
         <label>Screen effect<select class="text_pole" name="visual">${visualOptions(v.visual ?? 'auto')}</select></label>
+        <div class="sfx-icon-pick">
+            <span>Icon</span>
+            <input type="hidden" name="icon" value="${escapeHtml(cleanIcon(v.icon) || 'auto')}">
+            <div class="sfx-icon-grid">
+                <button type="button" data-act="pick-icon" data-icon="auto" class="${cleanIcon(v.icon) ? '' : 'sfx-picked'}" title="Automatic">Auto</button>
+                ${ICONS.map(([em, hint]) => `<button type="button" data-act="pick-icon" data-icon="${em}" title="${escapeHtml(hint)}" class="${cleanIcon(v.icon) === em ? 'sfx-picked' : ''}">${em}</button>`).join('')}
+            </div>
+        </div>
         <div class="sfx-actions">
             <button type="button" data-act="save">Save</button>
             <button type="button" data-act="cancel">Cancel</button>
@@ -452,6 +494,12 @@ async function onPanelClick(event) {
     const list = currentState();
     const effect = list.find(e => e.id === id);
 
+    if (act === 'pick-icon') {
+        const form = btn.closest('.sfx-form');
+        form.querySelector('[name="icon"]').value = btn.dataset.icon;
+        for (const b of form.querySelectorAll('[data-act="pick-icon"]')) b.classList.toggle('sfx-picked', b === btn);
+        return;
+    }
     if (act !== 'remove') confirmRemove = null;
 
     switch (act) {
@@ -513,6 +561,7 @@ async function onPanelClick(event) {
                 max,
                 effects: text(val('effects'), 300),
                 visual: val('visual'),
+                icon: cleanIcon(val('icon')),
                 note: 'Changed by hand.',
             };
             if (id === 'new') {
@@ -576,7 +625,82 @@ function updateVisuals() {
     renderVisuals(active, { strength: s.visualStrength / 100, animate: s.animate, placement: s.placement, words, wordsI, vibrate: s.ringVibrate });
 }
 
+// ---------- portrait badges ----------
+
+function sameName(a, b) {
+    const x = String(a ?? '').trim().toLowerCase();
+    const y = String(b ?? '').trim().toLowerCase();
+    if (!x || !y) return false;
+    return x === y || x.split(/\s+/)[0] === y.split(/\s+/)[0];
+}
+
+// Shows the active effects' icons on the latest message portrait of each affected character.
+function renderBadges() {
+    const chatEl = document.getElementById('chat');
+    if (!chatEl) return;
+    const s = settings();
+    const list = s.enabled && s.badges && hasChat() ? currentState().filter(e => e.stage > 0 && e.target) : [];
+    const messages = [...chatEl.querySelectorAll('.mes')];
+    const latest = new Map(); // name -> last .mes element
+    for (const mes of messages) {
+        const name = mes.getAttribute('ch_name');
+        if (name) latest.set(name.trim().toLowerCase(), mes);
+    }
+    const wanted = new Map(); // .mes -> effects
+    for (const [name, mes] of latest) {
+        const effects = list.filter(e => sameName(e.target, name));
+        if (effects.length) wanted.set(mes, effects);
+    }
+    for (const mes of messages) {
+        const effects = wanted.get(mes);
+        let box = mes.querySelector('.sfx-badges');
+        if (!effects) {
+            box?.remove();
+            continue;
+        }
+        const host = mes.querySelector('.mesAvatarWrapper') ?? mes.querySelector('.avatar')?.parentElement;
+        if (!host) continue;
+        if (!box) {
+            box = document.createElement('div');
+            box.className = 'sfx-badges';
+            host.classList.add('sfx-badge-host');
+            host.appendChild(box);
+        }
+        const sig = effects.map(e => `${e.id}:${iconOf(e)}:${e.stage}/${e.max}`).join('|');
+        if (box.dataset.sig === sig) continue;
+        box.dataset.sig = sig;
+        const shown = effects.slice(0, 3).map(e => {
+            const pct = e.max > 0 ? Math.round((e.stage / e.max) * 100) : 0;
+            return `<button type="button" class="sfx-badge" data-sfx-id="${escapeHtml(e.id)}" title="${escapeHtml(`${e.name} · ${e.stage}/${e.max}`)}" style="--p:${pct}%">${escapeHtml(iconOf(e))}</button>`;
+        });
+        if (effects.length > 3) shown.push(`<button type="button" class="sfx-badge sfx-badge-more" data-sfx-id="">+${effects.length - 3}</button>`);
+        box.innerHTML = shown.join('');
+    }
+}
+
+function openEffect(id) {
+    const panel = document.getElementById('sfx-panel');
+    if (!panel) return;
+    panel.hidden = false;
+    openId = id || null;
+    editing = null;
+    renderPanel();
+}
+
+let badgeTimer = null;
+function watchChat() {
+    const chatEl = document.getElementById('chat');
+    if (!chatEl || chatEl.dataset.sfxWatched) return;
+    chatEl.dataset.sfxWatched = '1';
+    new MutationObserver(() => {
+        clearTimeout(badgeTimer);
+        badgeTimer = setTimeout(renderBadges, 120);
+    }).observe(chatEl, { childList: true });
+}
+
 function refresh() {
+    watchChat();
+    renderBadges();
     renderPanel();
     if (hasChat()) updateInjection(currentState());
     else updateInjection([]);
@@ -650,6 +774,7 @@ function buildSettings() {
             <div class="inline-drawer-content">
                 <label class="checkbox_label"><input type="checkbox" data-key="enabled"> Enabled</label>
                 <label class="checkbox_label"><input type="checkbox" data-key="autoCheck"> Check automatically after each reply</label>
+                <label class="checkbox_label"><input type="checkbox" data-key="badges"> Show status icons on portraits</label>
                 <label>Messages the check reads <input class="text_pole" type="number" min="2" max="20" data-key="contextMessages"></label>
                 <label>Max stage change per reply (0 = no limit) <input class="text_pole" type="number" min="0" max="10" data-key="maxStep"></label>
                 <label>Reminder depth in chat <input class="text_pole" type="number" min="0" max="10" data-key="injectDepth"></label>
@@ -771,6 +896,15 @@ function wireEvents() {
         if (ev[name]) eventSource.on(ev[name], () => refresh());
     }
 }
+
+// Tapping a badge opens that effect in the panel (and not the avatar zoom).
+document.addEventListener('click', (event) => {
+    const badge = event.target.closest?.('.sfx-badge');
+    if (!badge) return;
+    event.preventDefault();
+    event.stopPropagation();
+    openEffect(badge.dataset.sfxId);
+}, true);
 
 jQuery(() => {
     try {

@@ -742,3 +742,81 @@ body.sfx-thump #chat {
     30% { transform: translate(-50%, -50%) scale(1); }
     100% { opacity: 0; transform: translate(-50%, -50%) scale(1.25); }
 }
+
+/* ---------- status icons ---------- */
+.sfx-icon {
+    font-style: normal;
+}
+
+.sfx-badge-host {
+    position: relative;
+}
+
+.sfx-badges {
+    position: absolute;
+    top: -6px;
+    right: -10px;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.sfx-badge {
+    position: relative;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border-radius: 50%;
+    font-size: 13px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #fff;
+    /* the ring around each icon fills up with the effect's progress */
+    background:
+        radial-gradient(circle, rgba(22, 16, 32, 0.95) 58%, transparent 60%),
+        conic-gradient(#b56cff var(--p, 0%), rgba(255, 255, 255, 0.18) 0);
+    border: none;
+    box-shadow: 0 0 6px rgba(181, 108, 255, 0.55);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.sfx-badge-more {
+    font-size: 10px;
+    background: rgba(22, 16, 32, 0.95);
+    border: 1px solid rgba(181, 108, 255, 0.8);
+}
+
+.sfx-icon-pick {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.85em;
+}
+
+.sfx-icon-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
+    gap: 4px;
+}
+
+.sfx-icon-grid button {
+    min-height: 36px;
+    padding: 0;
+    font-size: 18px;
+    border-radius: 6px;
+    border: 1px solid var(--SmartThemeBorderColor, rgba(255, 255, 255, 0.2));
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.sfx-icon-grid button[data-icon="auto"] {
+    font-size: 11px;
+}
+
+.sfx-icon-grid button.sfx-picked {
+    border-color: #b56cff;
+    background: rgba(181, 108, 255, 0.3);
+}
