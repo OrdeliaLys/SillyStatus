@@ -137,9 +137,10 @@ function applyIntensity(entry, v, i, strength) {
 
 // active: [{ key, i }] with i from 0 to 1. Layers are reused so their
 // animations keep running smoothly when the values change.
-export function renderVisuals(active, { strength = 1, animate = true } = {}) {
+export function renderVisuals(active, { strength = 1, animate = true, over = true } = {}) {
     const box = ensureRoot();
     box.classList.toggle('sfx-still', !animate);
+    box.classList.toggle('sfx-over', over);
     const wanted = active
         .filter(a => BY_KEY.has(a.key) && a.i > 0)
         .sort((a, b) => b.i - a.i)

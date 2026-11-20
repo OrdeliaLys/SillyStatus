@@ -232,6 +232,12 @@
     contain: strict;
 }
 
+/* Over-the-chat mode: above messages, below the panel and menus, softened so text stays readable. */
+#sfx-fx-root.sfx-over {
+    z-index: 32;
+    opacity: 0.88;
+}
+
 .sfx-fx {
     position: absolute;
     inset: 0;

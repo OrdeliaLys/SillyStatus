@@ -22,6 +22,7 @@ const DEFAULTS = {
     visuals: true,
     visualStrength: 100,
     animate: true,
+    layer: 'over',
 };
 
 const CHECK_PROMPT = `You keep the status-effect tracker for an ongoing roleplay. You read the newest part of the story and report which tracked effects started, changed or ended. You never write story text.
@@ -540,7 +541,7 @@ function updateVisuals() {
     if (preview) best.set(preview.key, preview.i);
     const active = [...best].map(([key, i]) => ({ key, i }));
     if (preview) active.sort((a, b) => (b.key === preview.key) - (a.key === preview.key));
-    renderVisuals(active, { strength: s.visualStrength / 100, animate: s.animate });
+    renderVisuals(active, { strength: s.visualStrength / 100, animate: s.animate, over: s.layer !== 'behind' });
 }
 
 function refresh() {
@@ -580,11 +581,18 @@ function buildSettings() {
                 <hr>
                 <label class="checkbox_label"><input type="checkbox" data-key="visuals"> Screen effects behind the chat</label>
                 <label class="checkbox_label"><input type="checkbox" data-key="animate"> Animate screen effects</label>
+                <label>Draw screen effects
+                    <select class="text_pole" data-key="layer">
+                        <option value="over">Over the chat (always visible)</option>
+                        <option value="behind">Behind the chat (needs a see-through chat background)</option>
+                    </select>
+                </label>
                 <label>Screen effect strength <span id="sfx-strength-val"></span>
                     <input type="range" min="0" max="200" step="10" data-key="visualStrength">
                 </label>
                 <div class="sfx-preview">
                     <b>Preview</b>
+                    <small>Tap Show, then close this panel to see it.</small>
                     <select class="text_pole" id="sfx-preview-key">${VISUALS.map(v => `<option value="${v.key}">${escapeHtml(v.label)}</option>`).join('')}</select>
                     <label>Intensity <input type="range" min="0.1" max="1" step="0.1" value="0.6" id="sfx-preview-i"></label>
                     <div class="sfx-actions">
