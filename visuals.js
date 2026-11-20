@@ -4,10 +4,10 @@
 // which sets how visible the layer is, how fast it moves and, for some,
 // how many particles appear.
 
-export const VISUALS_VERSION = '1.3.0';
+export const VISUALS_VERSION = '1.3.1';
 
 export const VISUALS = [
-    { key: 'spiral', place: 'under', label: 'Hypnotic spiral', hint: 'hypnosis, trance, suggestion, mind control', words: ['hypno', 'trance', 'mesmer', 'pendulum', 'suggestion', 'mind control', 'brainwash', 'obedien'], min: 0.05, max: 0.3, slow: 70, fast: 9 },
+    { key: 'spiral', place: 'under', label: 'Hypnotic spiral', hint: 'hypnosis, trance, suggestion, mind control', words: ['hypno', 'trance', 'mesmer', 'pendulum', 'suggestion', 'mind control', 'brainwash', 'obedien'], min: 0.07, max: 0.32, slow: 22, fast: 2.6 },
     { key: 'tunnel', place: 'under', label: 'Tunnel vision', hint: 'fixation, obsession, narrowing focus, compulsion', words: ['obsess', 'fixat', 'compuls', 'focus', 'tunnel', 'fascinat'], min: 0.06, max: 0.4, slow: 9, fast: 2.5 },
     { key: 'pink', place: 'under', label: 'Pink haze', hint: 'arousal, lust, heat, desire', words: ['arous', 'lust', 'desire', 'horny', 'aphrodis', 'heat cycle', 'in heat'], min: 0.08, max: 0.55, slow: 7, fast: 2 },
     { key: 'hearts', place: 'under', label: 'Floating hearts', hint: 'infatuation, love, charm, crush, devotion', words: ['love', 'infatuat', 'crush', 'charm', 'smitten', 'devot', 'adore'], min: 0.25, max: 0.85, slow: 16, fast: 6, particles: { glyph: '♥', min: 3, max: 14 } },

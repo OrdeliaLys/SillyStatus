@@ -288,6 +288,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+    .sfx-fx,
     .sfx-fx::before,
     .sfx-fx::after,
     .sfx-fx > i {
@@ -320,12 +321,23 @@
 @keyframes sfx-shimmer { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
 
 /* 1 spiral */
+/* Spins steadily (faster as the stage rises), slowly breathes in and out,
+   and the centre glow pulses to draw the eye inward. No flashing. */
+.sfx-fx-spiral {
+    animation: sfx-trance-breathe calc(var(--dur, 10s) * 3) ease-in-out infinite;
+}
 .sfx-fx-spiral::before {
     left: 50%; top: 50%; width: 170vmax; height: 170vmax;
     background: var(--sfx-spiral) center / contain no-repeat;
-    animation: sfx-spin var(--dur, 30s) linear infinite;
+    animation: sfx-spin var(--dur, 10s) linear infinite;
 }
-.sfx-fx-spiral::after { inset: 0; background: radial-gradient(circle, rgba(170, 110, 255, 0.35), transparent 60%); }
+.sfx-fx-spiral::after {
+    inset: 0;
+    background: radial-gradient(circle, rgba(200, 150, 255, 0.55), rgba(150, 90, 255, 0.2) 25%, transparent 55%);
+    animation: sfx-trance-glow calc(var(--dur, 10s) * 1.5) ease-in-out infinite;
+}
+@keyframes sfx-trance-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+@keyframes sfx-trance-glow { 0%, 100% { opacity: 0.45; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1.15); } }
 
 /* 2 tunnel */
 .sfx-fx-tunnel::before {
