@@ -213,3 +213,283 @@
     display: block;
     margin: 6px 0;
 }
+
+/* ---------- Screen visuals (drawn behind the chat) ---------- */
+
+#sfx-fx-root {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    overflow: hidden;
+    contain: strict;
+}
+
+.sfx-fx {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    transition: opacity 1.2s ease;
+}
+
+.sfx-fx::before,
+.sfx-fx::after,
+.sfx-fx > i {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+    font-style: normal;
+}
+
+.sfx-still .sfx-fx,
+.sfx-still .sfx-fx::before,
+.sfx-still .sfx-fx::after,
+.sfx-still .sfx-fx > i {
+    animation-play-state: paused !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sfx-fx::before,
+    .sfx-fx::after,
+    .sfx-fx > i {
+        animation-play-state: paused !important;
+    }
+}
+
+/* shared motion */
+@keyframes sfx-spin { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+@keyframes sfx-breathe { 0%, 100% { transform: scale(1); opacity: 0.85; } 50% { transform: scale(1.06); opacity: 1; } }
+@keyframes sfx-breathe-c { 0%, 100% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(1.12); } }
+@keyframes sfx-heartbeat { 0%, 40%, 100% { opacity: 0.5; } 10% { opacity: 1; } 20% { opacity: 0.7; } 28% { opacity: 0.95; } }
+@keyframes sfx-close { from { transform: scale(1.18); } to { transform: scale(1); } }
+@keyframes sfx-drift { from { transform: translateX(-25vw); } to { transform: translateX(25vw); } }
+@keyframes sfx-sway { 0%, 100% { transform: translateX(-2%) skewX(-2deg); } 50% { transform: translateX(2%) skewX(2deg); } }
+@keyframes sfx-flicker { 0%, 100% { transform: scaleY(1); opacity: 0.85; } 25% { transform: scaleY(1.07); opacity: 1; } 50% { transform: scaleY(0.96); opacity: 0.75; } 75% { transform: scaleY(1.04); opacity: 0.95; } }
+@keyframes sfx-creep { from { transform: scale(1); } to { transform: scale(1.14); } }
+@keyframes sfx-mad { from { filter: hue-rotate(0deg); transform: rotate(0deg); } to { filter: hue-rotate(360deg); transform: rotate(360deg); } }
+@keyframes sfx-wobble { from { transform: translate(-3%, 1%) rotate(-2deg); } to { transform: translate(3%, -1%) rotate(2deg); } }
+@keyframes sfx-scan { from { transform: translateY(-20vh); } to { transform: translateY(115vh); } }
+@keyframes sfx-rise { 0% { transform: translateY(0) scale(0.8); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-125vh) scale(1.2); opacity: 0; } }
+@keyframes sfx-twinkle { 0%, 100% { transform: scale(0.3) rotate(0deg); opacity: 0; } 50% { transform: scale(1) rotate(45deg); opacity: 1; } }
+@keyframes sfx-waver { 0%, 100% { opacity: 0.8; } 30% { opacity: 1; } 60% { opacity: 0.6; } }
+@keyframes sfx-jitter { 0% { transform: translate(0, 0); } 25% { transform: translate(-20px, 10px); } 50% { transform: translate(15px, -25px); } 75% { transform: translate(-10px, 20px); } 100% { transform: translate(0, 0); } }
+@keyframes sfx-caustic { from { transform: translate(0, 0); } to { transform: translate(240px, 120px); } }
+@keyframes sfx-blob {
+    from { border-radius: 40% 60% 60% 40% / 40% 40% 60% 60%; transform: translate(0, 0) rotate(0deg); }
+    to { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: translate(12vw, -10vh) rotate(140deg); }
+}
+@keyframes sfx-shimmer { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
+
+/* 1 spiral */
+.sfx-fx-spiral::before {
+    left: 50%; top: 50%; width: 170vmax; height: 170vmax;
+    background: var(--sfx-spiral) center / contain no-repeat;
+    animation: sfx-spin var(--dur, 30s) linear infinite;
+}
+.sfx-fx-spiral::after { inset: 0; background: radial-gradient(circle, rgba(170, 110, 255, 0.35), transparent 60%); }
+
+/* 2 tunnel */
+.sfx-fx-tunnel::before {
+    left: 50%; top: 50%; width: 200vmax; height: 200vmax;
+    background: repeating-radial-gradient(circle, rgba(160, 110, 255, 0.6) 0 1.2%, transparent 1.2% 5%);
+    -webkit-mask-image: radial-gradient(circle, transparent 4%, black 30%);
+    mask-image: radial-gradient(circle, transparent 4%, black 30%);
+    animation: sfx-breathe-c var(--dur, 6s) ease-in-out infinite;
+}
+
+/* 3 pink */
+.sfx-fx-pink::before {
+    inset: -10%;
+    background: radial-gradient(ellipse at center, rgba(255, 140, 200, 0.18) 0%, rgba(255, 105, 180, 0.4) 55%, rgba(255, 50, 150, 0.85) 100%);
+    animation: sfx-breathe var(--dur, 4s) ease-in-out infinite;
+}
+
+/* 4 hearts */
+.sfx-fx-hearts::before { inset: 0; background: radial-gradient(ellipse at center, transparent 50%, rgba(255, 120, 180, 0.35) 100%); }
+.sfx-fx-hearts > i {
+    bottom: -8%; color: rgba(255, 110, 170, 0.95);
+    text-shadow: 0 0 8px rgba(255, 80, 150, 0.6);
+    animation: sfx-rise var(--dur, 10s) linear infinite;
+}
+
+/* 5 red */
+.sfx-fx-red::before {
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 35%, rgba(215, 0, 0, 0.9) 100%);
+    animation: sfx-heartbeat var(--dur, 1.2s) ease-in-out infinite;
+}
+
+/* 6 blood */
+.sfx-fx-blood::before {
+    inset: -8%;
+    background:
+        radial-gradient(circle at 0% 0%, rgba(120, 0, 0, 0.95), transparent 38%),
+        radial-gradient(circle at 100% 100%, rgba(110, 0, 0, 0.95), transparent 42%),
+        radial-gradient(circle at 100% 10%, rgba(90, 0, 0, 0.8), transparent 25%),
+        radial-gradient(circle at 5% 90%, rgba(90, 0, 0, 0.8), transparent 22%),
+        radial-gradient(ellipse at center, transparent 55%, rgba(80, 0, 0, 0.7) 100%);
+    animation: sfx-breathe var(--dur, 4s) ease-in-out infinite;
+}
+
+/* 7 dread */
+.sfx-fx-dread::before {
+    inset: -15%;
+    background: radial-gradient(ellipse at center, transparent 22%, rgba(0, 0, 0, 0.97) 85%);
+    animation: sfx-close var(--dur, 5s) ease-in-out infinite alternate;
+}
+
+/* 8 fog */
+.sfx-fx-fog > i {
+    width: 95vmax; height: 60vmax; border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(215, 215, 230, 0.85), transparent);
+    animation: sfx-drift var(--dur, 25s) ease-in-out infinite alternate;
+}
+.sfx-fx-fog > i:nth-child(1) { top: -15%; left: -20%; }
+.sfx-fx-fog > i:nth-child(2) { top: 25%; left: 20%; animation-delay: -6s; animation-direction: alternate-reverse; }
+.sfx-fx-fog > i:nth-child(3) { top: 60%; left: -30%; animation-delay: -12s; }
+.sfx-fx-fog > i:nth-child(4) { top: 5%; left: 45%; animation-delay: -18s; animation-direction: alternate-reverse; }
+
+/* 9 sickly */
+.sfx-fx-sickly::before {
+    inset: -10%;
+    background: radial-gradient(ellipse at center, rgba(160, 210, 40, 0.18), rgba(90, 140, 20, 0.7) 100%);
+    animation: sfx-sway var(--dur, 6s) ease-in-out infinite;
+}
+
+/* 10 frost */
+.sfx-fx-frost::before { inset: 0; background: radial-gradient(ellipse at center, transparent 40%, rgba(185, 230, 255, 0.9) 100%); }
+.sfx-fx-frost::after {
+    inset: 0;
+    background:
+        radial-gradient(circle, rgba(255, 255, 255, 0.95) 0 1px, transparent 1.6px) 0 0 / 22px 22px,
+        radial-gradient(circle, rgba(210, 240, 255, 0.8) 0 1.5px, transparent 2px) 11px 7px / 37px 37px;
+    -webkit-mask-image: radial-gradient(ellipse at center, transparent 45%, black 95%);
+    mask-image: radial-gradient(ellipse at center, transparent 45%, black 95%);
+    animation: sfx-shimmer var(--dur, 5s) ease-in-out infinite;
+}
+
+/* 11 fire */
+.sfx-fx-fire::before {
+    inset: -5%;
+    background:
+        linear-gradient(to top, rgba(255, 70, 0, 0.9), rgba(255, 150, 0, 0.35) 22%, transparent 50%),
+        radial-gradient(ellipse at 50% 120%, rgba(255, 120, 0, 0.7), transparent 60%);
+    transform-origin: bottom;
+    animation: sfx-flicker var(--dur, 1.5s) ease-in-out infinite;
+}
+
+/* 12 corruption */
+.sfx-fx-corruption::before {
+    inset: -10%;
+    background:
+        radial-gradient(ellipse at 0% 100%, rgba(60, 0, 80, 0.97), transparent 55%),
+        radial-gradient(ellipse at 100% 100%, rgba(40, 0, 60, 0.97), transparent 55%),
+        radial-gradient(ellipse at 50% 0%, rgba(80, 0, 90, 0.65), transparent 45%);
+    animation: sfx-creep var(--dur, 8s) ease-in-out infinite alternate;
+}
+.sfx-fx-corruption::after { inset: 0; background: var(--sfx-noise); opacity: 0.18; }
+
+/* 13 holy */
+.sfx-fx-holy::before {
+    left: 50%; top: 0; width: 220vmax; height: 220vmax;
+    background: repeating-conic-gradient(from 0deg, rgba(255, 225, 140, 0.6) 0deg 3deg, transparent 3deg 12deg);
+    -webkit-mask-image: radial-gradient(circle, black 0%, transparent 45%);
+    mask-image: radial-gradient(circle, black 0%, transparent 45%);
+    animation: sfx-spin var(--dur, 60s) linear infinite;
+}
+.sfx-fx-holy::after { inset: 0; background: radial-gradient(ellipse at 50% 0%, rgba(255, 230, 160, 0.7), transparent 55%); }
+
+/* 14 madness */
+.sfx-fx-madness::before {
+    inset: -30%;
+    background:
+        radial-gradient(circle at 30% 30%, rgba(255, 0, 150, 0.6), transparent 35%),
+        radial-gradient(circle at 70% 60%, rgba(0, 255, 200, 0.55), transparent 35%),
+        radial-gradient(circle at 40% 80%, rgba(255, 220, 0, 0.5), transparent 35%),
+        radial-gradient(circle at 80% 20%, rgba(80, 120, 255, 0.5), transparent 35%);
+    animation: sfx-mad var(--dur, 20s) linear infinite;
+}
+
+/* 15 drunk */
+.sfx-fx-drunk::before,
+.sfx-fx-drunk::after {
+    inset: -10%;
+    background:
+        radial-gradient(circle at 30% 40%, rgba(255, 190, 90, 0.55), transparent 40%),
+        radial-gradient(circle at 70% 65%, rgba(255, 150, 60, 0.45), transparent 40%);
+    animation: sfx-wobble var(--dur, 5s) ease-in-out infinite alternate;
+}
+.sfx-fx-drunk::after { animation-direction: alternate-reverse; opacity: 0.7; }
+
+/* 16 glitch */
+.sfx-fx-glitch::before { inset: 0; background: repeating-linear-gradient(to bottom, rgba(0, 255, 220, 0.22) 0 1px, transparent 1px 4px); }
+.sfx-fx-glitch::after {
+    left: 0; right: 0; top: 0; height: 14%;
+    background: linear-gradient(transparent, rgba(255, 0, 180, 0.45), rgba(0, 255, 220, 0.45), transparent);
+    animation: sfx-scan var(--dur, 3s) steps(24) infinite;
+}
+
+/* 17 sparkle */
+.sfx-fx-sparkle > i {
+    color: rgba(255, 235, 150, 1);
+    text-shadow: 0 0 10px rgba(255, 220, 120, 0.9);
+    animation: sfx-twinkle var(--dur, 3s) ease-in-out infinite;
+}
+
+/* 18 shadow */
+.sfx-fx-shadow::before {
+    inset: -10%;
+    background: radial-gradient(ellipse at center, transparent 28%, rgba(5, 0, 10, 0.95) 85%);
+}
+.sfx-fx-shadow::after {
+    inset: 0;
+    background:
+        radial-gradient(ellipse 18% 45% at 0% 60%, rgba(0, 0, 0, 0.95), transparent),
+        radial-gradient(ellipse 15% 40% at 100% 30%, rgba(0, 0, 0, 0.95), transparent),
+        radial-gradient(ellipse 40% 14% at 40% 100%, rgba(0, 0, 0, 0.95), transparent),
+        radial-gradient(ellipse 30% 12% at 70% 0%, rgba(0, 0, 0, 0.9), transparent);
+    animation: sfx-waver var(--dur, 3s) ease-in-out infinite;
+}
+
+/* 19 static */
+.sfx-fx-static::before {
+    inset: -60px;
+    background: var(--sfx-noise);
+    animation: sfx-jitter var(--dur, 0.4s) steps(4) infinite;
+}
+
+/* 20 water */
+.sfx-fx-water::before { inset: 0; background: linear-gradient(rgba(30, 110, 180, 0.4), rgba(10, 50, 120, 0.75)); }
+.sfx-fx-water::after {
+    inset: -260px;
+    background:
+        radial-gradient(circle at 30% 30%, rgba(170, 225, 255, 0.45) 0 7%, transparent 9%) 0 0 / 120px 120px,
+        radial-gradient(circle at 70% 60%, rgba(170, 225, 255, 0.3) 0 9%, transparent 11%) 0 0 / 240px 240px;
+    animation: sfx-caustic var(--dur, 12s) linear infinite;
+}
+
+/* 21 drained (greys out the background through backdrop-filter, set in JS) */
+.sfx-fx-drained::before { inset: 0; background: rgba(20, 20, 30, 0.4); opacity: var(--i, 0.5); }
+
+/* 22 morph */
+.sfx-fx-morph > i {
+    width: 60vmax; height: 60vmax;
+    animation: sfx-blob var(--dur, 12s) ease-in-out infinite alternate;
+}
+.sfx-fx-morph > i:nth-child(1) { top: -15%; left: -20%; background: radial-gradient(closest-side, rgba(40, 200, 180, 0.8), transparent); }
+.sfx-fx-morph > i:nth-child(2) { top: 45%; left: 40%; background: radial-gradient(closest-side, rgba(255, 170, 40, 0.75), transparent); animation-delay: -4s; }
+.sfx-fx-morph > i:nth-child(3) { top: 20%; left: -30%; background: radial-gradient(closest-side, rgba(150, 80, 255, 0.7), transparent); animation-delay: -8s; animation-direction: alternate-reverse; }
+
+/* small label in the panel */
+.sfx-visual-tag {
+    grid-column: 1 / -1;
+    font-size: 0.8em;
+    opacity: 0.6;
+}
+
+.sfx-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+}

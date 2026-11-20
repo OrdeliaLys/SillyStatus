@@ -5,6 +5,8 @@
 // effect started, changed or ended. The current effects are also sent to
 // the AI with every prompt so it can play them at the right stage.
 
+import { VISUALS, isVisual, visualLabel, guessVisual, renderVisuals } from './visuals.js';
+
 const MODULE = 'status_effects';
 const PROMPT_KEY = 'status_effects_panel';
 const IN_CHAT = 1;      // extension_prompt_types.IN_CHAT
@@ -17,6 +19,9 @@ const DEFAULTS = {
     maxStep: 1,
     injectDepth: 1,
     side: 'left',
+    visuals: true,
+    visualStrength: 100,
+    animate: true,
 };
 
 const CHECK_PROMPT = `You keep the status-effect tracker for an ongoing roleplay. You read the newest part of the story and report which tracked effects started, changed or ended. You never write story text.
@@ -32,10 +37,12 @@ RULES
 - "target" is who it affects (a character name).
 - Remove an effect only when the story clearly ends it.
 - Refer to existing effects by their id.
+- "visual" is the screen effect shown while it is active. Pick the closest from this list, or "none" if nothing fits:
+${VISUALS.map(v => `  ${v.key}: ${v.hint}`).join('\n')}
 
 ANSWER WITH JSON ONLY, in this shape:
 {"changes": [
-  {"op": "add", "name": "Hypnotic conditioning", "target": "Name", "stage": 1, "max": 8, "effects": "Feels drowsy and pliant when hearing the pendulum chime.", "note": "First session with the pendulum."},
+  {"op": "add", "name": "Hypnotic conditioning", "target": "Name", "stage": 1, "max": 8, "effects": "Feels drowsy and pliant when hearing the pendulum chime.", "visual": "spiral", "note": "First session with the pendulum."},
   {"op": "update", "id": "e1", "stage": 3, "effects": "...", "note": "Why it changed."},
   {"op": "remove", "id": "e2", "note": "Why it ended."}
 ]}`;
@@ -102,6 +109,19 @@ function nextId(list) {
         if (m) n = Math.max(n, Number(m[1]));
     }
     return `e${n + 1}`;
+}
+
+function pickVisual(requested, fallbackText) {
+    if (requested === 'none') return 'none';
+    if (isVisual(requested)) return requested;
+    return guessVisual(fallbackText) ?? 'none';
+}
+
+// The visual an effect shows. 'auto' or missing means guess from its text.
+function visualOf(e) {
+    if (e.visual === 'none') return null;
+    if (isVisual(e.visual)) return e.visual;
+    return guessVisual(`${e.name} ${e.effects}`);
 }
 
 // ---------- state ----------
@@ -219,6 +239,7 @@ function applyChanges(before, changes, maxStep) {
                 stage: clampInt(ch.stage, 0, max, 1),
                 max,
                 effects: text(ch.effects, 300),
+                visual: pickVisual(ch.visual, `${name} ${ch.effects ?? ''}`),
                 note: text(ch.note, 200),
             });
             log.push(`New: ${name}`);
@@ -234,6 +255,7 @@ function applyChanges(before, changes, maxStep) {
             }
             e.stage = Math.min(e.stage, e.max);
             if (ch.effects) e.effects = text(ch.effects, 300);
+            if (ch.visual && (isVisual(ch.visual) || ch.visual === 'none')) e.visual = ch.visual;
             if (ch.note) e.note = text(ch.note, 200);
             if (e.stage !== oldStage) log.push(`${e.name}: ${oldStage} → ${e.stage}/${e.max}`);
         } else if (op === 'remove') {
@@ -348,6 +370,7 @@ function effectHtml(e) {
             <span class="sfx-stage">${e.stage}/${e.max}</span>
             <span class="sfx-bar"><span style="width:${pct}%"></span></span>
             ${e.target ? `<span class="sfx-target">${escapeHtml(e.target)}</span>` : ''}
+            ${visualOf(e) ? `<span class="sfx-visual-tag"><i class="fa-solid fa-eye"></i> ${escapeHtml(visualLabel(visualOf(e)))}</span>` : ''}
         </button>`;
     if (open) {
         const sure = confirmRemove === e.id;
@@ -365,6 +388,11 @@ function effectHtml(e) {
     return html + '</div>';
 }
 
+function visualOptions(selected) {
+    const opts = [['auto', 'Automatic (from name)'], ['none', 'None'], ...VISUALS.map(v => [v.key, v.label])];
+    return opts.map(([k, l]) => `<option value="${k}"${k === selected ? ' selected' : ''}>${escapeHtml(l)}</option>`).join('');
+}
+
 function formHtml(e) {
     const v = e ?? { name: '', target: ctx().name1 ?? '', stage: 1, max: 8, effects: '' };
     return `<div class="sfx-form" data-id="${escapeHtml(e?.id ?? 'new')}">
@@ -375,6 +403,7 @@ function formHtml(e) {
             <label>Out of<input class="text_pole" name="max" type="number" inputmode="numeric" min="2" max="20" value="${v.max}"></label>
         </div>
         <label>What it does now<textarea class="text_pole" name="effects" rows="3" maxlength="300">${escapeHtml(v.effects)}</textarea></label>
+        <label>Screen effect<select class="text_pole" name="visual">${visualOptions(v.visual ?? 'auto')}</select></label>
         <div class="sfx-actions">
             <button type="button" data-act="save">Save</button>
             <button type="button" data-act="cancel">Cancel</button>
@@ -477,6 +506,7 @@ async function onPanelClick(event) {
                 stage: clampInt(val('stage'), 0, max, 1),
                 max,
                 effects: text(val('effects'), 300),
+                visual: val('visual'),
                 note: 'Changed by hand.',
             };
             if (id === 'new') {
@@ -495,10 +525,29 @@ async function onPanelClick(event) {
     renderPanel();
 }
 
+let preview = null; // { key, i } while previewing from settings
+
+function updateVisuals() {
+    const s = settings();
+    const best = new Map();
+    if (s.enabled && s.visuals && hasChat()) {
+        for (const e of currentState()) {
+            const key = visualOf(e);
+            const i = e.max > 0 ? e.stage / e.max : 0;
+            if (key && i > 0) best.set(key, Math.max(best.get(key) ?? 0, i));
+        }
+    }
+    if (preview) best.set(preview.key, preview.i);
+    const active = [...best].map(([key, i]) => ({ key, i }));
+    if (preview) active.sort((a, b) => (b.key === preview.key) - (a.key === preview.key));
+    renderVisuals(active, { strength: s.visualStrength / 100, animate: s.animate });
+}
+
 function refresh() {
     renderPanel();
     if (hasChat()) updateInjection(currentState());
     else updateInjection([]);
+    updateVisuals();
 }
 
 // ---------- settings UI ----------
@@ -528,6 +577,21 @@ function buildSettings() {
                     </select>
                 </label>
                 <small>The automatic check is one extra short AI request per character reply, using your current connection.</small>
+                <hr>
+                <label class="checkbox_label"><input type="checkbox" data-key="visuals"> Screen effects behind the chat</label>
+                <label class="checkbox_label"><input type="checkbox" data-key="animate"> Animate screen effects</label>
+                <label>Screen effect strength <span id="sfx-strength-val"></span>
+                    <input type="range" min="0" max="200" step="10" data-key="visualStrength">
+                </label>
+                <div class="sfx-preview">
+                    <b>Preview</b>
+                    <select class="text_pole" id="sfx-preview-key">${VISUALS.map(v => `<option value="${v.key}">${escapeHtml(v.label)}</option>`).join('')}</select>
+                    <label>Intensity <input type="range" min="0.1" max="1" step="0.1" value="0.6" id="sfx-preview-i"></label>
+                    <div class="sfx-actions">
+                        <button type="button" class="menu_button" id="sfx-preview-go">Show</button>
+                        <button type="button" class="menu_button" id="sfx-preview-stop">Stop</button>
+                    </div>
+                </div>
             </div>
         </div>`;
     host.appendChild(wrap);
@@ -536,15 +600,32 @@ function buildSettings() {
         const key = input.dataset.key;
         if (input.type === 'checkbox') input.checked = !!s[key];
         else input.value = s[key];
-        input.addEventListener('change', () => {
+        const onChange = () => {
             if (input.type === 'checkbox') s[key] = input.checked;
-            else if (input.type === 'number') s[key] = clampInt(input.value, Number(input.min), Number(input.max), DEFAULTS[key]);
+            else if (input.type === 'number' || input.type === 'range') s[key] = clampInt(input.value, Number(input.min), Number(input.max), DEFAULTS[key]);
             else s[key] = input.value;
             if (input.type === 'number') input.value = s[key];
+            showStrength();
             saveSettings();
             refresh();
-        });
+        };
+        input.addEventListener(input.type === 'range' ? 'input' : 'change', onChange);
     }
+
+    const showStrength = () => { wrap.querySelector('#sfx-strength-val').textContent = `${s.visualStrength}%`; };
+    showStrength();
+
+    const startPreview = () => {
+        preview = { key: wrap.querySelector('#sfx-preview-key').value, i: Number(wrap.querySelector('#sfx-preview-i').value) };
+        updateVisuals();
+    };
+    wrap.querySelector('#sfx-preview-go').addEventListener('click', startPreview);
+    wrap.querySelector('#sfx-preview-key').addEventListener('change', () => preview && startPreview());
+    wrap.querySelector('#sfx-preview-i').addEventListener('input', () => preview && startPreview());
+    wrap.querySelector('#sfx-preview-stop').addEventListener('click', () => {
+        preview = null;
+        updateVisuals();
+    });
 }
 
 // ---------- events ----------

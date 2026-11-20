@@ -19,3 +19,7 @@ Then reload the page.
 - The active effects and their stages are sent to the AI with every prompt.
 - Effects are saved on each message, so swiping or deleting a reply undoes its changes.
 - Settings live under **Extensions → Status Effects**.
+
+## Screen effects
+
+Effects can also tint the screen behind the chat. There are 22 visuals, such as a hypnotic spiral, pink haze, floating hearts, red pulse, frost, flames, holy light, glitch scanlines and drained colour. Each grows stronger as the effect's stage rises. The AI picks one when it adds an effect, and you can change it in the effect's edit form. Strength, animation and a preview of every visual are under **Extensions → Status Effects**.
