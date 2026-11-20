@@ -4,7 +4,7 @@
 // which sets how visible the layer is, how fast it moves and, for some,
 // how many particles appear.
 
-export const VISUALS_VERSION = '1.5.0';
+export const VISUALS_VERSION = '1.6.0';
 
 export const VISUALS = [
     { key: 'spiral', place: 'under', label: 'Hypnotic spiral', hint: 'hypnosis, trance, suggestion, mind control', words: ['hypno', 'trance', 'mesmer', 'pendulum', 'suggestion', 'mind control', 'brainwash', 'obedien'], min: 0.07, max: 0.32, slow: 22, fast: 2.6 },
@@ -199,18 +199,44 @@ function makeLayer(v) {
     if (v.key === 'ring') {
         const ring = document.createElement('i');
         ring.className = 'sfx-ring';
-        const pulse = document.createElement('b');
-        pulse.className = 'sfx-ring-pulse';
-        el.append(ring, pulse);
-        // Each time the ring reaches the centre: pulse, and pop a word if there are any.
+        const parts = ['bloom', 'shock', 'shock2', 'core'].map(name => {
+            const b = document.createElement('b');
+            b.className = `sfx-ring-${name}`;
+            return b;
+        });
+        const sparks = document.createElement('b');
+        sparks.className = 'sfx-ring-sparks';
+        for (let n = 0; n < 12; n++) {
+            const dot = document.createElement('u');
+            dot.style.setProperty('--a', `${n * 30 + (n % 2 ? 8 : -6)}deg`);
+            dot.style.setProperty('--d', `${(22 + (n % 3) * 7)}vmin`);
+            sparks.appendChild(dot);
+        }
+        el.append(ring, ...parts, sparks);
+        // Each time the ring reaches the centre: the impact, and a word if there are any.
         ring.addEventListener('animationiteration', () => {
-            pulse.classList.remove('sfx-go');
-            void pulse.offsetWidth;
-            pulse.classList.add('sfx-go');
+            el.classList.remove('sfx-go');
+            void el.offsetWidth;
+            el.classList.add('sfx-go');
+            thump();
+            if (ringOptions.vibrate) navigator.vibrate?.(14);
             flashWord(true);
         });
     }
     return el;
+}
+
+const ringOptions = { vibrate: false, animate: true };
+
+// A tiny "heartbeat" swell of the chat on each ring impact.
+function thump() {
+    if (!ringOptions.animate) return;
+    const body = document.body;
+    body.classList.remove('sfx-thump');
+    void body.offsetWidth;
+    body.classList.add('sfx-thump');
+    clearTimeout(thump.t);
+    thump.t = setTimeout(() => body.classList.remove('sfx-thump'), 700);
 }
 
 // ---- flashing words ----
@@ -302,7 +328,8 @@ function applyIntensity(entry, v, i, strength, soften = 1) {
 // active: [{ key, i }] with i from 0 to 1. Layers are reused so their
 // animations keep running smoothly when the values change.
 // placement: 'auto' (each visual's own default), 'under' or 'over'.
-export function renderVisuals(active, { strength = 1, animate = true, placement = 'auto', words = [], wordsI = 0 } = {}) {
+export function renderVisuals(active, { strength = 1, animate = true, placement = 'auto', words = [], wordsI = 0, vibrate = false } = {}) {
+    Object.assign(ringOptions, { vibrate, animate });
     const wanted = active
         .filter(a => BY_KEY.has(a.key) && a.i > 0)
         .sort((a, b) => b.i - a.i)

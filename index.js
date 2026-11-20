@@ -7,7 +7,7 @@
 
 import { VISUALS, VISUALS_VERSION, isVisual, visualLabel, guessVisual, renderVisuals, tintInfo } from './visuals.js';
 
-const VERSION = '1.5.0';
+const VERSION = '1.6.0';
 
 const MODULE = 'status_effects';
 const PROMPT_KEY = 'status_effects_panel';
@@ -25,6 +25,7 @@ const DEFAULTS = {
     visualStrength: 100,
     animate: true,
     placement: 'auto',
+    ringVibrate: false,
 };
 
 const CHECK_PROMPT = `You keep the status-effect tracker for an ongoing roleplay. You read the newest part of the story and report which tracked effects started, changed or ended. You never write story text.
@@ -572,7 +573,7 @@ function updateVisuals() {
     words = [...new Set(words)].slice(0, 24);
     const active = [...best].map(([key, i]) => ({ key, i }));
     if (preview) active.sort((a, b) => (b.key === preview.key) - (a.key === preview.key));
-    renderVisuals(active, { strength: s.visualStrength / 100, animate: s.animate, placement: s.placement, words, wordsI });
+    renderVisuals(active, { strength: s.visualStrength / 100, animate: s.animate, placement: s.placement, words, wordsI, vibrate: s.ringVibrate });
 }
 
 function refresh() {
@@ -662,6 +663,7 @@ function buildSettings() {
                 <hr>
                 <label class="checkbox_label"><input type="checkbox" data-key="visuals"> Screen effects behind the chat</label>
                 <label class="checkbox_label"><input type="checkbox" data-key="animate"> Animate screen effects</label>
+                <label class="checkbox_label"><input type="checkbox" data-key="ringVibrate"> Short vibration on each ring pulse (phones)</label>
                 <label>Where screen effects go
                     <select class="text_pole" data-key="placement">
                         <option value="auto">Each effect's best spot (recommended)</option>

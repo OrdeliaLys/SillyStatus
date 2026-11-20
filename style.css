@@ -608,37 +608,104 @@ body.sfx-woozy.sfx-still-chat #chat .mes_text {
     user-select: text;
 }
 
-/* 23 converging ring: closes in from the edges, accelerating, then a soft pulse at the centre */
-.sfx-fx > b {
+/* 23 converging ring: closes in from the edges, accelerating and brightening,
+   then a layered impact: core pop, two shockwaves, sparks and a warm bloom. */
+.sfx-fx > b,
+.sfx-fx > b > u {
     position: absolute;
     pointer-events: none;
 }
 .sfx-fx-ring .sfx-ring {
     left: 50%; top: 50%; width: 150vmax; height: 150vmax;
     border-radius: 50%;
-    border: 0.9vmin solid rgba(200, 160, 255, 0.95);
-    box-shadow: 0 0 3vmin rgba(170, 120, 255, 0.8), inset 0 0 3vmin rgba(170, 120, 255, 0.6);
+    border: 0.9vmin solid rgba(200, 160, 255, 0.9);
     animation: sfx-converge var(--dur, 4s) cubic-bezier(0.55, 0, 1, 1) infinite;
 }
-.sfx-fx-ring .sfx-ring-pulse {
-    left: 50%; top: 50%; width: 60vmin; height: 60vmin;
+@keyframes sfx-converge {
+    0% { transform: translate(-50%, -50%) scale(1); opacity: 0; box-shadow: 0 0 1vmin rgba(170, 120, 255, 0.4); }
+    15% { opacity: 0.8; }
+    80% { box-shadow: 0 0 3vmin rgba(180, 130, 255, 0.7), inset 0 0 2vmin rgba(180, 130, 255, 0.5); }
+    100% { transform: translate(-50%, -50%) scale(0.01); opacity: 1; border-color: rgba(255, 240, 255, 1); box-shadow: 0 0 8vmin rgba(220, 180, 255, 1), inset 0 0 6vmin rgba(220, 180, 255, 0.9); }
+}
+
+/* impact parts, hidden until the ring lands */
+.sfx-fx-ring .sfx-ring-core,
+.sfx-fx-ring .sfx-ring-shock,
+.sfx-fx-ring .sfx-ring-shock2,
+.sfx-fx-ring .sfx-ring-bloom,
+.sfx-fx-ring .sfx-ring-sparks {
+    left: 50%; top: 50%;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(235, 215, 255, 0.95), rgba(170, 120, 255, 0.5) 30%, transparent 65%);
+    opacity: 0;
     transform: translate(-50%, -50%) scale(0);
+}
+.sfx-fx-ring .sfx-ring-core {
+    width: 34vmin; height: 34vmin;
+    background: radial-gradient(circle, rgba(255, 250, 255, 1), rgba(235, 200, 255, 0.85) 25%, rgba(170, 110, 255, 0.4) 50%, transparent 70%);
+}
+.sfx-fx-ring .sfx-ring-shock,
+.sfx-fx-ring .sfx-ring-shock2 {
+    width: 80vmin; height: 80vmin;
+    border: 0.7vmin solid rgba(230, 200, 255, 0.9);
+    box-shadow: 0 0 3vmin rgba(190, 140, 255, 0.8), inset 0 0 3vmin rgba(190, 140, 255, 0.6);
+}
+.sfx-fx-ring .sfx-ring-bloom {
+    width: 200vmax; height: 200vmax;
+    background: radial-gradient(circle, rgba(255, 220, 245, 0.55), rgba(200, 150, 255, 0.25) 20%, transparent 45%);
+}
+.sfx-fx-ring .sfx-ring-sparks {
+    width: 0; height: 0;
+    transform: translate(-50%, -50%);
+}
+.sfx-fx-ring .sfx-ring-sparks > u {
+    left: 0; top: 0;
+    width: 1.4vmin; height: 1.4vmin;
+    margin: -0.7vmin 0 0 -0.7vmin;
+    border-radius: 50%;
+    background: rgb(255, 240, 255);
+    box-shadow: 0 0 1.5vmin rgba(220, 170, 255, 1);
     opacity: 0;
 }
-.sfx-fx-ring .sfx-ring-pulse.sfx-go {
-    animation: sfx-ring-pulse 0.9s ease-out forwards;
+
+.sfx-fx-ring.sfx-go .sfx-ring-core { animation: sfx-core-pop 0.75s cubic-bezier(0.2, 0.9, 0.3, 1.3) forwards; }
+.sfx-fx-ring.sfx-go .sfx-ring-shock { animation: sfx-shock 0.9s cubic-bezier(0.1, 0.7, 0.3, 1) forwards; }
+.sfx-fx-ring.sfx-go .sfx-ring-shock2 { animation: sfx-shock 1.2s cubic-bezier(0.1, 0.7, 0.3, 1) 0.14s forwards; }
+.sfx-fx-ring.sfx-go .sfx-ring-bloom { animation: sfx-bloom 1.6s ease-out forwards; }
+.sfx-fx-ring.sfx-go .sfx-ring-sparks { opacity: 1; }
+.sfx-fx-ring.sfx-go .sfx-ring-sparks > u { animation: sfx-spark 0.85s cubic-bezier(0.1, 0.8, 0.3, 1) forwards; }
+
+@keyframes sfx-core-pop {
+    0% { opacity: 1; transform: translate(-50%, -50%) scale(0.15); }
+    30% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+    55% { opacity: 0.85; transform: translate(-50%, -50%) scale(0.95); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.05); }
 }
-@keyframes sfx-converge {
-    0% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
-    15% { opacity: 1; }
-    100% { transform: translate(-50%, -50%) scale(0.01); opacity: 1; }
+@keyframes sfx-shock {
+    0% { opacity: 1; transform: translate(-50%, -50%) scale(0.05); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(2.2); }
 }
-@keyframes sfx-ring-pulse {
-    0% { transform: translate(-50%, -50%) scale(0.1); opacity: 1; }
-    35% { transform: translate(-50%, -50%) scale(0.75); opacity: 0.9; }
-    100% { transform: translate(-50%, -50%) scale(1.6); opacity: 0; }
+@keyframes sfx-bloom {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+    20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.1); }
+}
+@keyframes sfx-spark {
+    0% { opacity: 1; transform: rotate(var(--a)) translateY(0) scale(1); }
+    70% { opacity: 0.9; }
+    100% { opacity: 0; transform: rotate(var(--a)) translateY(calc(var(--d) * -1)) scale(0.3); }
+}
+
+/* the chat's tiny heartbeat on impact */
+body.sfx-thump #chat {
+    animation: sfx-thump 0.6s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+@keyframes sfx-thump {
+    0% { transform: scale(1); }
+    18% { transform: scale(1.012); }
+    100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+    body.sfx-thump #chat { animation: none; }
 }
 
 /* flashing words */
