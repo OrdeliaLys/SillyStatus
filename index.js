@@ -7,7 +7,7 @@
 
 import { VISUALS, VISUALS_VERSION, isVisual, visualLabel, guessVisual, renderVisuals, tintInfo } from './visuals.js';
 
-const VERSION = '1.7.0';
+const VERSION = '1.7.1';
 
 // Status icons: shown in the panel and on the affected character's portrait.
 const ICONS = [
@@ -55,7 +55,8 @@ Lasting conditions that build, fade or matter later: hypnosis, mind control, con
 RULES
 - Only report what the story actually shows. Most replies change nothing; then return {"changes": []}.
 - Stages are whole numbers from 0 to max. A new effect usually starts at stage 1. Pick a max of 5 to 10 that fits how long it should take.
-- Change a stage by 1 when an effect clearly advances or is resisted or treated. Bigger jumps only for overwhelming events.
+- Change a stage by 1 when an effect clearly advances or is resisted or treated.
+- Overwhelming exposure jumps further: deliberately throwing oneself into the source (face pressed to the hypnotic screen, diving into the fire, downing the whole bottle), a massive dose, or a direct full-strength hit. Move 2 to 4 stages, or straight to the end if nothing could withstand it, and add "intense": true. A sudden, powerful cure or rescue can drop stages the same way.
 - "effects" is one short sentence saying what the effect does at its current stage, written so a storyteller can play it.
 - "target" is who it affects (a character name).
 - Remove an effect only when the story clearly ends it.
@@ -289,7 +290,7 @@ function applyChanges(before, changes, maxStep) {
             if (ch.max !== undefined) e.max = clampInt(ch.max, 2, 20, e.max);
             if (ch.stage !== undefined) {
                 let stage = clampInt(ch.stage, 0, e.max, e.stage);
-                if (maxStep > 0 && !ch.ooc) stage = Math.max(oldStage - maxStep, Math.min(oldStage + maxStep, stage));
+                if (maxStep > 0 && !ch.ooc && !ch.intense) stage = Math.max(oldStage - maxStep, Math.min(oldStage + maxStep, stage));
                 e.stage = stage;
             }
             e.stage = Math.min(e.stage, e.max);
@@ -297,7 +298,7 @@ function applyChanges(before, changes, maxStep) {
             if (ch.visual && (isVisual(ch.visual) || ch.visual === 'none')) e.visual = ch.visual;
             if (cleanIcon(ch.icon)) e.icon = cleanIcon(ch.icon);
             if (ch.note) e.note = text(ch.note, 200);
-            if (e.stage !== oldStage) log.push(`${e.name}: ${oldStage} → ${e.stage}/${e.max}`);
+            if (e.stage !== oldStage) log.push(`${e.name}: ${oldStage} → ${e.stage}/${e.max}${ch.intense && Math.abs(e.stage - oldStage) > 1 ? ' ⚡' : ''}`);
         } else if (op === 'remove') {
             const e = findEffect(list, ch);
             if (!e) continue;
