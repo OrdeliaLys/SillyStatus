@@ -4,11 +4,12 @@
 // which sets how visible the layer is, how fast it moves and, for some,
 // how many particles appear.
 
-export const VISUALS_VERSION = '1.4.0';
+export const VISUALS_VERSION = '1.5.0';
 
 export const VISUALS = [
     { key: 'spiral', place: 'under', label: 'Hypnotic spiral', hint: 'hypnosis, trance, suggestion, mind control', words: ['hypno', 'trance', 'mesmer', 'pendulum', 'suggestion', 'mind control', 'brainwash', 'obedien'], min: 0.07, max: 0.32, slow: 22, fast: 2.6 },
     { key: 'tunnel', place: 'under', label: 'Tunnel vision', hint: 'fixation, obsession, narrowing focus, compulsion', words: ['obsess', 'fixat', 'compuls', 'focus', 'tunnel', 'fascinat'], min: 0.06, max: 0.4, slow: 9, fast: 2.5 },
+    { key: 'ring', place: 'under', label: 'Converging ring', hint: 'trance induction, rhythm, countdowns, conditioning cues, building pressure', words: ['induct', 'countdown', 'rhythm', 'pulse', 'cue', 'condition'], min: 0.3, max: 0.9, slow: 5.5, fast: 1.8 },
     { key: 'pink', place: 'under', label: 'Pink haze', hint: 'arousal, lust, heat, desire', words: ['arous', 'lust', 'desire', 'horny', 'aphrodis', 'heat cycle', 'in heat'], min: 0.08, max: 0.55, slow: 7, fast: 2 },
     { key: 'hearts', place: 'under', label: 'Floating hearts', hint: 'infatuation, love, charm, crush, devotion', words: ['love', 'infatuat', 'crush', 'charm', 'smitten', 'devot', 'adore'], min: 0.25, max: 0.85, slow: 16, fast: 6, particles: { glyph: '♥', min: 3, max: 14 } },
     { key: 'red', place: 'over', label: 'Red pulse', hint: 'rage, anger, bloodlust, frenzy', words: ['rage', 'anger', 'angry', 'fury', 'furious', 'berserk', 'bloodlust', 'frenzy'], min: 0.08, max: 0.55, slow: 2.2, fast: 0.7 },
@@ -195,7 +196,85 @@ function makeLayer(v) {
     el.className = `sfx-fx sfx-fx-${v.key}`;
     el.style.opacity = '0';
     for (let n = 0; n < (BLOB_COUNT[v.key] ?? 0); n++) el.appendChild(document.createElement('i'));
+    if (v.key === 'ring') {
+        const ring = document.createElement('i');
+        ring.className = 'sfx-ring';
+        const pulse = document.createElement('b');
+        pulse.className = 'sfx-ring-pulse';
+        el.append(ring, pulse);
+        // Each time the ring reaches the centre: pulse, and pop a word if there are any.
+        ring.addEventListener('animationiteration', () => {
+            pulse.classList.remove('sfx-go');
+            void pulse.offsetWidth;
+            pulse.classList.add('sfx-go');
+            flashWord(true);
+        });
+    }
     return el;
+}
+
+// ---- flashing words ----
+// Words come from [a; b; c] lists in effect descriptions. Without a ring they
+// flash at random spots; with a ring they pop in the centre on each pulse.
+const wordState = { words: [], i: 0, strength: 1, animate: true, synced: false, timer: null, last: -1 };
+let wordsBox = null;
+
+function flashWord(centered) {
+    const { words, i, strength } = wordState;
+    if (!words.length || !wordsBox?.isConnected || !wordState.animate) return;
+    let n = Math.floor(Math.random() * words.length);
+    if (words.length > 1 && n === wordState.last) n = (n + 1) % words.length;
+    wordState.last = n;
+    const span = document.createElement('span');
+    span.textContent = words[n];
+    span.className = centered ? 'sfx-word sfx-word-center' : 'sfx-word';
+    const size = (centered ? 9 : 5 + Math.random() * 5) * (0.8 + 0.5 * i);
+    span.style.fontSize = `${size.toFixed(1)}vmin`;
+    span.style.setProperty('--peak', Math.min(1, (0.3 + 0.6 * i) * strength).toFixed(2));
+    if (!centered) {
+        span.style.left = `${(15 + Math.random() * 70).toFixed(1)}%`;
+        span.style.top = `${(12 + Math.random() * 76).toFixed(1)}%`;
+        span.style.setProperty('--rot', `${(Math.random() * 16 - 8).toFixed(1)}deg`);
+    }
+    wordsBox.appendChild(span);
+    const done = () => span.remove();
+    span.addEventListener('animationend', done);
+    setTimeout(done, 4000);
+}
+
+function scheduleWords() {
+    clearTimeout(wordState.timer);
+    wordState.timer = null;
+    if (!wordState.words.length || wordState.synced || !wordState.animate) return;
+    const gap = 3800 - 2600 * wordState.i + Math.random() * 900;
+    wordState.timer = setTimeout(() => {
+        wordState.timer = null;
+        flashWord(false);
+        scheduleWords();
+    }, gap);
+}
+
+function updateWords(words, i, { strength, animate, place, ringOn }) {
+    Object.assign(wordState, { words, i, strength, animate, synced: ringOn });
+    if (!words.length || i <= 0) {
+        clearTimeout(wordState.timer);
+        wordState.timer = null;
+        wordsBox?.remove();
+        return false;
+    }
+    if (!wordsBox) {
+        wordsBox = document.createElement('div');
+        wordsBox.className = 'sfx-words';
+    }
+    const box = ensureRoot(place);
+    if (wordsBox.parentElement !== box) box.appendChild(wordsBox);
+    if (ringOn || !animate) {
+        clearTimeout(wordState.timer);
+        wordState.timer = null;
+    } else if (!wordState.timer) {
+        scheduleWords();
+    }
+    return true;
 }
 
 function applyIntensity(entry, v, i, strength, soften = 1) {
@@ -223,7 +302,7 @@ function applyIntensity(entry, v, i, strength, soften = 1) {
 // active: [{ key, i }] with i from 0 to 1. Layers are reused so their
 // animations keep running smoothly when the values change.
 // placement: 'auto' (each visual's own default), 'under' or 'over'.
-export function renderVisuals(active, { strength = 1, animate = true, placement = 'auto' } = {}) {
+export function renderVisuals(active, { strength = 1, animate = true, placement = 'auto', words = [], wordsI = 0 } = {}) {
     const wanted = active
         .filter(a => BY_KEY.has(a.key) && a.i > 0)
         .sort((a, b) => b.i - a.i)
@@ -270,6 +349,13 @@ export function renderVisuals(active, { strength = 1, animate = true, placement 
     body.classList.toggle('sfx-still-chat', !animate);
     for (const r of Object.values(roots)) r?.classList.toggle('sfx-still', !animate);
 
+    const wordsPlace = placement === 'over' ? 'over' : 'under';
+    const wordsOn = updateWords(words, wordsI, { strength, animate, place: wordsPlace, ringOn: keep.has('ring') });
+    if (wordsOn && wordsPlace === 'under') anyUnder = true;
+
     if (anyUnder) takeOverTint();
-    else setTimeout(() => { if (![...layers.values()].some(e => e.el.parentElement === roots.under)) releaseTint(); }, 1300);
+    else setTimeout(() => {
+        const usedUnder = [...layers.values()].some(e => e.el.parentElement === roots.under) || wordsBox?.parentElement === roots.under;
+        if (!usedUnder) releaseTint();
+    }, 1300);
 }

@@ -472,27 +472,37 @@
 }
 .sfx-fx-drunk::after { animation-direction: alternate-reverse; opacity: 0.7; }
 
-body.sfx-woozy #chat {
-    animation: sfx-woozy-tilt var(--sfx-woozy-dur, 5s) ease-in-out infinite;
-    transform-origin: 50% 40%;
+/* Each message drifts on its own: different speeds, phases and directions. */
+body.sfx-woozy #chat .mes {
+    animation: sfx-woozy-drift calc(var(--sfx-woozy-dur, 5s) * var(--wm, 1)) ease-in-out infinite alternate;
+    animation-delay: var(--wd, 0s);
+    transform-origin: 50% 50%;
 }
+body.sfx-woozy #chat .mes:nth-child(5n+1) { --wm: 1; --wd: -0.4s; }
+body.sfx-woozy #chat .mes:nth-child(5n+2) { --wm: 1.27; --wd: -1.9s; animation-direction: alternate-reverse; }
+body.sfx-woozy #chat .mes:nth-child(5n+3) { --wm: 0.86; --wd: -3.1s; }
+body.sfx-woozy #chat .mes:nth-child(5n+4) { --wm: 1.13; --wd: -0.9s; animation-direction: alternate-reverse; }
+body.sfx-woozy #chat .mes:nth-child(5n+5) { --wm: 0.94; --wd: -2.6s; }
 body.sfx-woozy #chat .mes_text {
-    animation: sfx-woozy-ghost calc(var(--sfx-woozy-dur, 5s) * 0.8) ease-in-out infinite;
+    animation: sfx-woozy-ghost calc(var(--sfx-woozy-dur, 5s) * var(--wm, 1) * 0.73) ease-in-out infinite;
+    animation-delay: calc(var(--wd, 0s) * 1.7);
 }
-body.sfx-woozy.sfx-still-chat #chat,
+body.sfx-woozy.sfx-still-chat #chat .mes,
 body.sfx-woozy.sfx-still-chat #chat .mes_text {
     animation-play-state: paused;
 }
-@keyframes sfx-woozy-tilt {
-    0%, 100% { transform: rotate(calc(var(--sfx-woozy, 0.5) * -0.9deg)) translateX(calc(var(--sfx-woozy, 0.5) * -6px)); }
-    50% { transform: rotate(calc(var(--sfx-woozy, 0.5) * 0.9deg)) translateX(calc(var(--sfx-woozy, 0.5) * 6px)); }
+@keyframes sfx-woozy-drift {
+    0% { transform: translate(calc(var(--sfx-woozy, 0.5) * -6px), calc(var(--sfx-woozy, 0.5) * 2px)) rotate(calc(var(--sfx-woozy, 0.5) * -0.7deg)); }
+    35% { transform: translate(calc(var(--sfx-woozy, 0.5) * 3px), calc(var(--sfx-woozy, 0.5) * -3px)) rotate(calc(var(--sfx-woozy, 0.5) * 0.4deg)); }
+    70% { transform: translate(calc(var(--sfx-woozy, 0.5) * -2px), calc(var(--sfx-woozy, 0.5) * 4px)) rotate(calc(var(--sfx-woozy, 0.5) * 0.15deg)); }
+    100% { transform: translate(calc(var(--sfx-woozy, 0.5) * 6px), calc(var(--sfx-woozy, 0.5) * -1px)) rotate(calc(var(--sfx-woozy, 0.5) * 0.7deg)); }
 }
 @keyframes sfx-woozy-ghost {
     0%, 100% { text-shadow: calc(var(--sfx-woozy, 0.5) * -5px) calc(var(--sfx-woozy, 0.5) * 1px) 1px rgba(255, 210, 150, 0.45); }
     50% { text-shadow: calc(var(--sfx-woozy, 0.5) * 5px) calc(var(--sfx-woozy, 0.5) * -1px) 1px rgba(255, 210, 150, 0.45); }
 }
 @media (prefers-reduced-motion: reduce) {
-    body.sfx-woozy #chat,
+    body.sfx-woozy #chat .mes,
     body.sfx-woozy #chat .mes_text { animation-play-state: paused; }
 }
 
@@ -596,4 +606,72 @@ body.sfx-woozy.sfx-still-chat #chat .mes_text {
     border-radius: 6px;
     background: rgba(0, 0, 0, 0.35);
     user-select: text;
+}
+
+/* 23 converging ring: closes in from the edges, accelerating, then a soft pulse at the centre */
+.sfx-fx > b {
+    position: absolute;
+    pointer-events: none;
+}
+.sfx-fx-ring .sfx-ring {
+    left: 50%; top: 50%; width: 150vmax; height: 150vmax;
+    border-radius: 50%;
+    border: 0.9vmin solid rgba(200, 160, 255, 0.95);
+    box-shadow: 0 0 3vmin rgba(170, 120, 255, 0.8), inset 0 0 3vmin rgba(170, 120, 255, 0.6);
+    animation: sfx-converge var(--dur, 4s) cubic-bezier(0.55, 0, 1, 1) infinite;
+}
+.sfx-fx-ring .sfx-ring-pulse {
+    left: 50%; top: 50%; width: 60vmin; height: 60vmin;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(235, 215, 255, 0.95), rgba(170, 120, 255, 0.5) 30%, transparent 65%);
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+}
+.sfx-fx-ring .sfx-ring-pulse.sfx-go {
+    animation: sfx-ring-pulse 0.9s ease-out forwards;
+}
+@keyframes sfx-converge {
+    0% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+    15% { opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(0.01); opacity: 1; }
+}
+@keyframes sfx-ring-pulse {
+    0% { transform: translate(-50%, -50%) scale(0.1); opacity: 1; }
+    35% { transform: translate(-50%, -50%) scale(0.75); opacity: 0.9; }
+    100% { transform: translate(-50%, -50%) scale(1.6); opacity: 0; }
+}
+
+/* flashing words */
+.sfx-words {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+}
+.sfx-word {
+    position: absolute;
+    transform: translate(-50%, -50%) rotate(var(--rot, 0deg));
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    color: rgb(235, 220, 255);
+    text-shadow: 0 0 1.5vmin rgba(180, 120, 255, 0.95), 0 0 4vmin rgba(150, 90, 255, 0.6);
+    opacity: 0;
+    animation: sfx-word-flash 1.8s ease-out forwards;
+}
+.sfx-word-center {
+    left: 50%;
+    top: 50%;
+    animation: sfx-word-pop 1.5s ease-out forwards;
+}
+@keyframes sfx-word-flash {
+    0% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) scale(0.85); }
+    15% { opacity: var(--peak, 0.6); }
+    60% { opacity: calc(var(--peak, 0.6) * 0.6); }
+    100% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) scale(1.1); }
+}
+@keyframes sfx-word-pop {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+    12% { opacity: var(--peak, 0.6); transform: translate(-50%, -50%) scale(1.08); }
+    30% { transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.25); }
 }

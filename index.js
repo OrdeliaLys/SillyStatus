@@ -7,7 +7,7 @@
 
 import { VISUALS, VISUALS_VERSION, isVisual, visualLabel, guessVisual, renderVisuals, tintInfo } from './visuals.js';
 
-const VERSION = '1.4.0';
+const VERSION = '1.5.0';
 
 const MODULE = 'status_effects';
 const PROMPT_KEY = 'status_effects_panel';
@@ -40,6 +40,7 @@ RULES
 - "target" is who it affects (a character name).
 - Remove an effect only when the story clearly ends it.
 - Refer to existing effects by their id.
+- If an effect involves words (mantras, commands, trigger words, intrusive thoughts, chants, whispers), end its "effects" sentence with up to 6 short ones in square brackets separated by semicolons, like [sleep; obey; deeper]. They will flash on screen.
 - "visual" is the screen effect shown while it is active. Pick the closest from this list, or "none" if nothing fits:
 ${VISUALS.map(v => `  ${v.key}: ${v.hint}`).join('\n')}
 
@@ -531,20 +532,47 @@ async function onPanelClick(event) {
 
 let preview = null; // { key, i } while previewing from settings
 
+const SAMPLE_WORDS = ['sleep', 'deeper', 'relax', 'obey', 'good', 'listen'];
+
+// Words in [a; b; c] lists inside an effect's description.
+function wordsOf(e) {
+    const out = [];
+    for (const m of String(e.effects ?? '').matchAll(/\[([^\]]+)\]/g)) {
+        for (const w of m[1].split(';')) {
+            const t = w.trim().slice(0, 40);
+            if (t) out.push(t);
+        }
+    }
+    return out;
+}
+
 function updateVisuals() {
     const s = settings();
     const best = new Map();
+    let words = [];
+    let wordsI = 0;
     if (s.enabled && s.visuals && hasChat()) {
         for (const e of currentState()) {
             const key = visualOf(e);
             const i = e.max > 0 ? e.stage / e.max : 0;
             if (key && i > 0) best.set(key, Math.max(best.get(key) ?? 0, i));
+            const ws = wordsOf(e);
+            if (ws.length && i > 0) {
+                words.push(...ws);
+                wordsI = Math.max(wordsI, i);
+            }
         }
     }
-    if (preview) best.set(preview.key, preview.i);
+    if (preview?.key === '__words') {
+        words = SAMPLE_WORDS;
+        wordsI = preview.i;
+    } else if (preview) {
+        best.set(preview.key, preview.i);
+    }
+    words = [...new Set(words)].slice(0, 24);
     const active = [...best].map(([key, i]) => ({ key, i }));
     if (preview) active.sort((a, b) => (b.key === preview.key) - (a.key === preview.key));
-    renderVisuals(active, { strength: s.visualStrength / 100, animate: s.animate, placement: s.placement });
+    renderVisuals(active, { strength: s.visualStrength / 100, animate: s.animate, placement: s.placement, words, wordsI });
 }
 
 function refresh() {
@@ -647,7 +675,8 @@ function buildSettings() {
                 <div class="sfx-preview">
                     <b>Preview</b>
                     <small>Tap Show, then close this panel to see it.</small>
-                    <select class="text_pole" id="sfx-preview-key">${VISUALS.map(v => `<option value="${v.key}">${escapeHtml(v.label)}</option>`).join('')}</select>
+                    <select class="text_pole" id="sfx-preview-key">${VISUALS.map(v => `<option value="${v.key}">${escapeHtml(v.label)}</option>`).join('')}<option value="__words">Flashing words (sample)</option></select>
+                    <small>Words flash for any effect whose description has a list like [sleep; obey; deeper]. Preview words and the ring together by adding the words to an effect.</small>
                     <label>Intensity <input type="range" min="0.1" max="1" step="0.1" value="0.6" id="sfx-preview-i"></label>
                     <div class="sfx-actions">
                         <button type="button" class="menu_button" id="sfx-preview-go">Show</button>
