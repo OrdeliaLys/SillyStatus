@@ -268,6 +268,7 @@
     height: 100%;
     pointer-events: none;
     transition: opacity 1.2s ease;
+    contain: strict;
 }
 
 .sfx-fx::before,
@@ -314,8 +315,9 @@
 @keyframes sfx-jitter { 0% { transform: translate(0, 0); } 25% { transform: translate(-20px, 10px); } 50% { transform: translate(15px, -25px); } 75% { transform: translate(-10px, 20px); } 100% { transform: translate(0, 0); } }
 @keyframes sfx-caustic { from { transform: translate(0, 0); } to { transform: translate(240px, 120px); } }
 @keyframes sfx-blob {
-    from { border-radius: 40% 60% 60% 40% / 40% 40% 60% 60%; transform: translate(0, 0) rotate(0deg); }
-    to { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: translate(12vw, -10vh) rotate(140deg); }
+    0% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+    50% { transform: translate(6vw, -4vh) rotate(70deg) scale(1.15, 0.85); }
+    100% { transform: translate(12vw, -10vh) rotate(140deg) scale(0.9, 1.15); }
 }
 @keyframes sfx-shimmer { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
 
@@ -326,7 +328,9 @@
     animation: sfx-trance-breathe calc(var(--dur, 10s) * 3) ease-in-out infinite;
 }
 .sfx-fx-spiral::before {
-    left: 50%; top: 50%; width: 170vmax; height: 170vmax;
+    left: 50%; top: 50%;
+    width: 125vmax; height: 125vmax;
+    width: hypot(100vw, 100vh); height: hypot(100vw, 100vh);
     background: var(--sfx-spiral) center / contain no-repeat;
     animation: sfx-spin var(--dur, 10s) linear infinite;
 }
@@ -340,10 +344,12 @@
 
 /* 2 tunnel */
 .sfx-fx-tunnel::before {
-    left: 50%; top: 50%; width: 200vmax; height: 200vmax;
-    background: repeating-radial-gradient(circle, rgba(160, 110, 255, 0.6) 0 1.2%, transparent 1.2% 5%);
-    -webkit-mask-image: radial-gradient(circle, transparent 4%, black 30%);
-    mask-image: radial-gradient(circle, transparent 4%, black 30%);
+    left: 50%; top: 50%;
+    width: 125vmax; height: 125vmax;
+    width: hypot(100vw, 100vh); height: hypot(100vw, 100vh);
+    background: repeating-radial-gradient(circle, rgba(160, 110, 255, 0.6) 0 1.7vmax, transparent 1.7vmax 7vmax);
+    -webkit-mask-image: radial-gradient(circle, transparent 6vmax, black 42vmax);
+    mask-image: radial-gradient(circle, transparent 6vmax, black 42vmax);
     animation: sfx-breathe-c var(--dur, 6s) ease-in-out infinite;
 }
 
@@ -441,23 +447,43 @@
 
 /* 13 holy */
 .sfx-fx-holy::before {
-    left: 50%; top: 0; width: 220vmax; height: 220vmax;
+    left: 50%; top: 0; width: 150vmax; height: 150vmax;
     background: repeating-conic-gradient(from 0deg, rgba(255, 225, 140, 0.6) 0deg 3deg, transparent 3deg 12deg);
-    -webkit-mask-image: radial-gradient(circle, black 0%, transparent 45%);
-    mask-image: radial-gradient(circle, black 0%, transparent 45%);
+    -webkit-mask-image: radial-gradient(circle, black 0%, transparent 66%);
+    mask-image: radial-gradient(circle, black 0%, transparent 66%);
     animation: sfx-spin var(--dur, 60s) linear infinite;
 }
 .sfx-fx-holy::after { inset: 0; background: radial-gradient(ellipse at 50% 0%, rgba(255, 230, 160, 0.7), transparent 55%); }
 
-/* 14 madness */
+/* 14 madness: two colour fields turning against each other and swapping
+   strength, instead of an animated colour filter (much cheaper on phones). */
+.sfx-fx-madness::before,
+.sfx-fx-madness::after {
+    inset: -15%;
+}
 .sfx-fx-madness::before {
-    inset: -30%;
     background:
         radial-gradient(circle at 30% 30%, rgba(255, 0, 150, 0.6), transparent 35%),
         radial-gradient(circle at 70% 60%, rgba(0, 255, 200, 0.55), transparent 35%),
-        radial-gradient(circle at 40% 80%, rgba(255, 220, 0, 0.5), transparent 35%),
-        radial-gradient(circle at 80% 20%, rgba(80, 120, 255, 0.5), transparent 35%);
-    animation: sfx-mad var(--dur, 20s) linear infinite;
+        radial-gradient(circle at 40% 85%, rgba(255, 220, 0, 0.5), transparent 32%);
+    animation: sfx-mad-a var(--dur, 20s) linear infinite;
+}
+.sfx-fx-madness::after {
+    background:
+        radial-gradient(circle at 75% 25%, rgba(80, 120, 255, 0.55), transparent 35%),
+        radial-gradient(circle at 25% 65%, rgba(255, 120, 0, 0.5), transparent 35%),
+        radial-gradient(circle at 60% 90%, rgba(170, 0, 255, 0.5), transparent 32%);
+    animation: sfx-mad-b calc(var(--dur, 20s) * 0.7) linear infinite;
+}
+@keyframes sfx-mad-a {
+    0% { transform: rotate(0deg) scale(1); opacity: 1; }
+    50% { transform: rotate(180deg) scale(1.1); opacity: 0.35; }
+    100% { transform: rotate(360deg) scale(1); opacity: 1; }
+}
+@keyframes sfx-mad-b {
+    0% { transform: rotate(0deg) scale(1.1); opacity: 0.35; }
+    50% { transform: rotate(-180deg) scale(1); opacity: 1; }
+    100% { transform: rotate(-360deg) scale(1.1); opacity: 0.35; }
 }
 
 /* 15 drunk: faint warm haze, plus the chat itself tilting and a swaying
@@ -472,8 +498,10 @@
 }
 .sfx-fx-drunk::after { animation-direction: alternate-reverse; opacity: 0.7; }
 
-/* Each message drifts on its own: different speeds, phases and directions. */
-body.sfx-woozy #chat .mes {
+/* Each message drifts on its own: different speeds, phases and directions.
+   Only the newest messages move (the ones that can be on screen), and only the
+   newest few get the animated double-vision ghost; older ones keep a still one. */
+body.sfx-woozy #chat .mes:nth-last-child(-n+14) {
     animation: sfx-woozy-drift calc(var(--sfx-woozy-dur, 5s) * var(--wm, 1)) ease-in-out infinite alternate;
     animation-delay: var(--wd, 0s);
     transform-origin: 50% 50%;
@@ -484,6 +512,9 @@ body.sfx-woozy #chat .mes:nth-child(5n+3) { --wm: 0.86; --wd: -3.1s; }
 body.sfx-woozy #chat .mes:nth-child(5n+4) { --wm: 1.13; --wd: -0.9s; animation-direction: alternate-reverse; }
 body.sfx-woozy #chat .mes:nth-child(5n+5) { --wm: 0.94; --wd: -2.6s; }
 body.sfx-woozy #chat .mes_text {
+    text-shadow: calc(var(--sfx-woozy, 0.5) * 4px) calc(var(--sfx-woozy, 0.5) * 1px) 1px rgba(255, 210, 150, 0.4);
+}
+body.sfx-woozy #chat .mes:nth-last-child(-n+4) .mes_text {
     animation: sfx-woozy-ghost calc(var(--sfx-woozy-dur, 5s) * var(--wm, 1) * 0.73) ease-in-out infinite;
     animation-delay: calc(var(--wd, 0s) * 1.7);
 }
@@ -560,8 +591,15 @@ body.sfx-woozy.sfx-still-chat #chat .mes_text {
     animation: sfx-caustic var(--dur, 12s) linear infinite;
 }
 
-/* 21 drained: greys out and darkens everything below it (text included),
-   with a dark drip slowly sinking down the screen. Saturation is set in JS. */
+/* 21 drained: the chat and background lose their colour (a filter set from JS
+   on the page parts behind, which rarely change, so it stays cheap), plus a
+   darkened edge and a dark drip slowly sinking down the screen. */
+body.sfx-drained #bg1,
+body.sfx-drained #bg_custom,
+body.sfx-drained #sheld {
+    filter: grayscale(var(--sfx-gray, 0)) brightness(var(--sfx-bright, 1));
+    transition: filter 1.2s ease;
+}
 .sfx-fx-drained::before {
     inset: 0;
     background: radial-gradient(ellipse at center, transparent 35%, rgba(5, 5, 12, 0.6) 100%);
@@ -575,14 +613,15 @@ body.sfx-woozy.sfx-still-chat #chat .mes_text {
 }
 @keyframes sfx-sink { from { transform: translateY(0); } to { transform: translateY(50%); } }
 
-/* 22 morph */
+/* 22 morph: oval blobs drifting, turning and stretching (moved, not reshaped,
+   so the phone doesn't redraw them every frame). */
 .sfx-fx-morph > i {
-    width: 60vmax; height: 60vmax;
+    width: 70vmax; height: 46vmax;
     animation: sfx-blob var(--dur, 12s) ease-in-out infinite alternate;
 }
-.sfx-fx-morph > i:nth-child(1) { top: -15%; left: -20%; background: radial-gradient(closest-side, rgba(40, 200, 180, 0.8), transparent); }
-.sfx-fx-morph > i:nth-child(2) { top: 45%; left: 40%; background: radial-gradient(closest-side, rgba(255, 170, 40, 0.75), transparent); animation-delay: -4s; }
-.sfx-fx-morph > i:nth-child(3) { top: 20%; left: -30%; background: radial-gradient(closest-side, rgba(150, 80, 255, 0.7), transparent); animation-delay: -8s; animation-direction: alternate-reverse; }
+.sfx-fx-morph > i:nth-child(1) { top: -15%; left: -25%; background: radial-gradient(closest-side, rgba(40, 200, 180, 0.8), transparent); }
+.sfx-fx-morph > i:nth-child(2) { top: 45%; left: 30%; background: radial-gradient(closest-side, rgba(255, 170, 40, 0.75), transparent); animation-delay: -4s; }
+.sfx-fx-morph > i:nth-child(3) { top: 20%; left: -35%; background: radial-gradient(closest-side, rgba(150, 80, 255, 0.7), transparent); animation-delay: -8s; animation-direction: alternate-reverse; }
 
 /* small label in the panel */
 .sfx-visual-tag {
@@ -616,16 +655,33 @@ body.sfx-woozy.sfx-still-chat #chat .mes_text {
     pointer-events: none;
 }
 .sfx-fx-ring .sfx-ring {
-    left: 50%; top: 50%; width: 150vmax; height: 150vmax;
+    left: 50%; top: 50%;
+    width: 125vmax; height: 125vmax;
+    width: hypot(100vw, 100vh); height: hypot(100vw, 100vh);
     border-radius: 50%;
     border: 0.9vmin solid rgba(200, 160, 255, 0.9);
+    box-shadow: 0 0 2vmin rgba(170, 120, 255, 0.6), inset 0 0 2vmin rgba(170, 120, 255, 0.4);
     animation: sfx-converge var(--dur, 4s) cubic-bezier(0.55, 0, 1, 1) infinite;
 }
+/* a brighter copy of the ring that fades in as it closes */
+.sfx-fx-ring .sfx-ring::after {
+    content: '';
+    position: absolute;
+    inset: -0.9vmin;
+    border-radius: 50%;
+    border: 0.9vmin solid rgba(255, 240, 255, 1);
+    box-shadow: 0 0 6vmin rgba(220, 180, 255, 1), inset 0 0 5vmin rgba(220, 180, 255, 0.9);
+    opacity: 0;
+    animation: sfx-converge-glow var(--dur, 4s) cubic-bezier(0.55, 0, 1, 1) infinite;
+}
 @keyframes sfx-converge {
-    0% { transform: translate(-50%, -50%) scale(1); opacity: 0; box-shadow: 0 0 1vmin rgba(170, 120, 255, 0.4); }
+    0% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
     15% { opacity: 0.8; }
-    80% { box-shadow: 0 0 3vmin rgba(180, 130, 255, 0.7), inset 0 0 2vmin rgba(180, 130, 255, 0.5); }
-    100% { transform: translate(-50%, -50%) scale(0.01); opacity: 1; border-color: rgba(255, 240, 255, 1); box-shadow: 0 0 8vmin rgba(220, 180, 255, 1), inset 0 0 6vmin rgba(220, 180, 255, 0.9); }
+    100% { transform: translate(-50%, -50%) scale(0.01); opacity: 1; }
+}
+@keyframes sfx-converge-glow {
+    0%, 55% { opacity: 0; }
+    100% { opacity: 1; }
 }
 
 /* impact parts, hidden until the ring lands */
@@ -650,8 +706,8 @@ body.sfx-woozy.sfx-still-chat #chat .mes_text {
     box-shadow: 0 0 3vmin rgba(190, 140, 255, 0.8), inset 0 0 3vmin rgba(190, 140, 255, 0.6);
 }
 .sfx-fx-ring .sfx-ring-bloom {
-    width: 200vmax; height: 200vmax;
-    background: radial-gradient(circle, rgba(255, 220, 245, 0.55), rgba(200, 150, 255, 0.25) 20%, transparent 45%);
+    width: 100vmax; height: 100vmax;
+    background: radial-gradient(circle, rgba(255, 220, 245, 0.55), rgba(200, 150, 255, 0.25) 40%, transparent 90%);
 }
 .sfx-fx-ring .sfx-ring-sparks {
     width: 0; height: 0;
@@ -820,3 +876,51 @@ body.sfx-thump #chat {
     border-color: #b56cff;
     background: rgba(181, 108, 255, 0.3);
 }
+
+/* ---------- per-message change strip ---------- */
+.sfx-footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 6px;
+    clear: both;
+}
+
+.sfx-chip {
+    position: relative;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 26px;
+    padding: 3px 9px 5px;
+    border-radius: 999px;
+    font: inherit;
+    font-size: 0.8em;
+    line-height: 1.2;
+    color: var(--SmartThemeBodyColor, #ddd);
+    background: rgba(181, 108, 255, 0.12);
+    border: 1px solid rgba(181, 108, 255, 0.45);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.sfx-chip b {
+    font-weight: 600;
+    opacity: 0.85;
+}
+
+.sfx-chip-bar {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 2px;
+    width: var(--p, 0%);
+    background: linear-gradient(90deg, #7d5cff, #b56cff);
+}
+
+.sfx-chip-add { border-color: rgba(120, 220, 160, 0.6); background: rgba(120, 220, 160, 0.1); }
+.sfx-chip-down { border-color: rgba(120, 180, 255, 0.55); background: rgba(120, 180, 255, 0.1); }
+.sfx-chip-end { opacity: 0.6; text-decoration: line-through; text-decoration-thickness: 1px; }
+.sfx-chip-wait { cursor: default; opacity: 0.8; }
+.sfx-chip-recheck { padding: 3px 9px; opacity: 0.7; }

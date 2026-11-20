@@ -4,7 +4,7 @@
 // which sets how visible the layer is, how fast it moves and, for some,
 // how many particles appear.
 
-export const VISUALS_VERSION = '1.7.1';
+export const VISUALS_VERSION = '1.8.0';
 
 export const VISUALS = [
     { key: 'spiral', place: 'under', label: 'Hypnotic spiral', hint: 'hypnosis, trance, suggestion, mind control', words: ['hypno', 'trance', 'mesmer', 'pendulum', 'suggestion', 'mind control', 'brainwash', 'obedien'], min: 0.07, max: 0.32, slow: 22, fast: 2.6 },
@@ -310,9 +310,8 @@ function applyIntensity(entry, v, i, strength, soften = 1) {
     el.style.setProperty('--dur', `${(v.slow - (v.slow - v.fast) * i).toFixed(2)}s`);
     if (v.key === 'drained') {
         el.style.opacity = '1';
-        const f = `grayscale(${level.toFixed(2)}) brightness(${(1 - 0.15 * level).toFixed(2)})`;
-        el.style.backdropFilter = f;
-        el.style.webkitBackdropFilter = f;
+        document.body.style.setProperty('--sfx-gray', level.toFixed(2));
+        document.body.style.setProperty('--sfx-bright', (1 - 0.15 * level).toFixed(2));
     } else {
         el.style.opacity = Math.min(1, (v.min + (v.max - v.min) * i) * strength * soften).toFixed(3);
     }
@@ -374,6 +373,7 @@ export function renderVisuals(active, { strength = 1, animate = true, placement 
         body.classList.remove('sfx-woozy');
     }
     body.classList.toggle('sfx-still-chat', !animate);
+    body.classList.toggle('sfx-drained', keep.has('drained'));
     for (const r of Object.values(roots)) r?.classList.toggle('sfx-still', !animate);
 
     const wordsPlace = placement === 'over' ? 'over' : 'under';

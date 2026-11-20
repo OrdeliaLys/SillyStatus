@@ -37,3 +37,11 @@ Every effect has an icon. The AI picks one when it adds an effect, and you can c
 ### Out-of-character requests
 
 Ask out of character, like `((set the hypnosis to stage 6))` or `((remove the bruise))`, and the next check applies it directly, ignoring the usual one-step limit.
+
+### Changes under each message
+
+Each message shows what it changed: new effects, stage changes (⚡ for big jumps), edits and ended effects, as small chips under the text. Tap a chip to open that effect. The newest reply also gets a ↻ button to check it again. Pop-ups for changes are off by default and can be turned back on in settings.
+
+### Swipes
+
+Changes are saved per swipe. A new swipe starts from the state before that message, and swiping back to an earlier swipe brings back that swipe's own changes.

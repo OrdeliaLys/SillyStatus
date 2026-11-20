@@ -7,7 +7,7 @@
 
 import { VISUALS, VISUALS_VERSION, isVisual, visualLabel, guessVisual, renderVisuals, tintInfo } from './visuals.js';
 
-const VERSION = '1.7.1';
+const VERSION = '1.8.0';
 
 // Status icons: shown in the panel and on the affected character's portrait.
 const ICONS = [
@@ -45,6 +45,8 @@ const DEFAULTS = {
     placement: 'auto',
     ringVibrate: false,
     badges: true,
+    footers: true,
+    toasts: false,
 };
 
 const CHECK_PROMPT = `You keep the status-effect tracker for an ongoing roleplay. You read the newest part of the story and report which tracked effects started, changed or ended. You never write story text.
@@ -75,6 +77,7 @@ ANSWER WITH JSON ONLY, in this shape:
 ]}`;
 
 let busy = false;
+let checkingIndex = null;
 let pending = null;
 let armed = false;
 let openId = null;
@@ -171,12 +174,38 @@ function copyList(list) {
     return Array.isArray(list) ? structuredClone(list) : [];
 }
 
+// Each saved state is tagged with the exact swipe it belongs to, so a state
+// written for one swipe is never read back for another.
+const SWIPES_KEY = `${MODULE}_swipes`;
+const TAG_KEY = `${MODULE}_tag`;
+
+function swipeTag(msg) {
+    const id = Number(msg?.swipe_id ?? 0);
+    const date = msg?.swipe_info?.[id]?.send_date ?? msg?.send_date ?? '';
+    return `${id}@${date}`;
+}
+
+// The state saved on this message for its current swipe, or null if this
+// swipe has none (then the state carries over from earlier messages).
+function ownState(msg) {
+    const ex = msg?.extra;
+    if (!ex) return null;
+    const tag = swipeTag(msg);
+    const map = ex[SWIPES_KEY];
+    if (map && Array.isArray(map[tag])) return copyList(map[tag]);
+    if (Array.isArray(ex[MODULE])) {
+        if (ex[TAG_KEY] === tag) return copyList(ex[MODULE]);
+        if (ex[TAG_KEY] === undefined && !map) return copyList(ex[MODULE]); // saved by an older version
+    }
+    return null;
+}
+
 function stateBefore(index) {
     const c = ctx();
     const chat = c.chat ?? [];
     for (let i = Math.min(index, chat.length) - 1; i >= 0; i--) {
-        const saved = chat[i]?.extra?.[MODULE];
-        if (Array.isArray(saved)) return copyList(saved);
+        const saved = ownState(chat[i]);
+        if (saved) return saved;
     }
     return copyList(c.chatMetadata?.[MODULE]);
 }
@@ -194,12 +223,22 @@ async function writeState(index, list) {
         await c.saveMetadata();
         return;
     }
+    const tag = swipeTag(msg);
+    const put = (extra) => {
+        const map = { ...(extra[SWIPES_KEY] ?? {}) };
+        map[tag] = structuredClone(list);
+        const keys = Object.keys(map);
+        for (const k of keys.slice(0, Math.max(0, keys.length - 30))) delete map[k];
+        extra[SWIPES_KEY] = map;
+        extra[MODULE] = structuredClone(list);
+        extra[TAG_KEY] = tag;
+    };
     msg.extra ??= {};
-    msg.extra[MODULE] = list;
+    put(msg.extra);
     const swipe = Array.isArray(msg.swipe_info) ? msg.swipe_info[msg.swipe_id ?? 0] : null;
     if (swipe && typeof swipe === 'object') {
         swipe.extra ??= {};
-        swipe.extra[MODULE] = structuredClone(list);
+        put(swipe.extra);
     }
     await (c.saveChat ?? c.saveChatConditional)?.();
 }
@@ -324,7 +363,9 @@ async function runCheck(index, manual = false) {
     }
     const key = chatKey();
     busy = true;
+    checkingIndex = index;
     renderPanel();
+    renderFooters();
     try {
         const before = stateBefore(index);
         const raw = await askModel(buildCheck(index, before));
@@ -337,13 +378,14 @@ async function runCheck(index, manual = false) {
         }
         const { list, log } = applyChanges(before, answer.changes, s.maxStep);
         await writeState(index, list);
-        if (log.length) toast('info', log.join('<br>'));
-        else if (manual) toast('info', 'No changes.');
+        if (log.length && s.toasts) toast('info', log.join('<br>'));
+        else if (manual && !log.length) toast('info', 'No changes.');
     } catch (err) {
         console.error('[Status Effects] check failed', err);
         toast('error', `Check failed: ${err?.message ?? err}`);
     } finally {
         busy = false;
+        checkingIndex = null;
         refresh();
         if (pending !== null) {
             const p = pending;
@@ -679,6 +721,79 @@ function renderBadges() {
     }
 }
 
+// What changed on each message: a small strip under the message text.
+function diffStates(before, after) {
+    const out = [];
+    const old = new Map(before.map(e => [e.id, e]));
+    for (const e of after) {
+        const b = old.get(e.id);
+        if (!b) out.push({ kind: 'add', e, to: e.stage });
+        else if (b.stage !== e.stage) out.push({ kind: e.stage > b.stage ? 'up' : 'down', e, from: b.stage, to: e.stage });
+        else if (b.effects !== e.effects || iconOf(b) !== iconOf(e)) out.push({ kind: 'edit', e, to: e.stage });
+        old.delete(e.id);
+    }
+    for (const b of old.values()) out.push({ kind: 'end', e: b });
+    return out;
+}
+
+function chipHtml(d) {
+    const e = d.e;
+    const pct = e.max > 0 ? Math.round(((d.to ?? e.stage) / e.max) * 100) : 0;
+    const icon = escapeHtml(iconOf(e));
+    const name = escapeHtml(e.name);
+    let tail = '';
+    if (d.kind === 'add') tail = `<b>new · ${d.to}/${e.max}</b>`;
+    else if (d.kind === 'up' || d.kind === 'down') tail = `<b>${d.from} → ${d.to}/${e.max}</b>${Math.abs(d.to - d.from) > 1 ? ' ⚡' : ''}`;
+    else if (d.kind === 'edit') tail = '<b>changed</b>';
+    else tail = '<b>ended</b>';
+    const bar = d.kind === 'end' ? '' : `<i class="sfx-chip-bar" style="--p:${pct}%"></i>`;
+    return `<button type="button" class="sfx-chip sfx-chip-${d.kind}" data-sfx-id="${d.kind === 'end' ? '' : escapeHtml(e.id)}">${icon} ${name} ${tail}${bar}</button>`;
+}
+
+function renderFooters() {
+    const chatEl = document.getElementById('chat');
+    if (!chatEl) return;
+    const s = settings();
+    const chat = ctx().chat ?? [];
+    const on = s.enabled && s.footers && hasChat();
+    let lastAi = chat.length - 1;
+    while (lastAi >= 0 && (chat[lastAi]?.is_user || chat[lastAi]?.is_system)) lastAi--;
+
+    for (const mes of chatEl.querySelectorAll('.mes')) {
+        const index = Number(mes.getAttribute('mesid'));
+        const msg = Number.isInteger(index) ? chat[index] : null;
+        let html = '';
+        if (on && msg) {
+            if (index === checkingIndex) {
+                html = '<span class="sfx-chip sfx-chip-wait"><i class="fa-solid fa-spinner fa-spin"></i> Checking status effects…</span>';
+            } else {
+                const own = ownState(msg);
+                if (own) {
+                    const chips = diffStates(stateBefore(index), own).map(chipHtml);
+                    html = chips.join('');
+                }
+                if (index === lastAi && !msg.is_user) {
+                    html += `<button type="button" class="sfx-chip sfx-chip-recheck" data-sfx-act="recheck" title="Check this reply again">↻</button>`;
+                }
+            }
+        }
+        let foot = mes.querySelector('.sfx-footer');
+        if (!html) {
+            foot?.remove();
+            continue;
+        }
+        if (!foot) {
+            foot = document.createElement('div');
+            foot.className = 'sfx-footer';
+            (mes.querySelector('.mes_block') ?? mes).appendChild(foot);
+        }
+        if (foot.dataset.sig !== html) {
+            foot.dataset.sig = html;
+            foot.innerHTML = html;
+        }
+    }
+}
+
 function openEffect(id) {
     const panel = document.getElementById('sfx-panel');
     if (!panel) return;
@@ -695,13 +810,17 @@ function watchChat() {
     chatEl.dataset.sfxWatched = '1';
     new MutationObserver(() => {
         clearTimeout(badgeTimer);
-        badgeTimer = setTimeout(renderBadges, 120);
+        badgeTimer = setTimeout(() => {
+            renderBadges();
+            renderFooters();
+        }, 120);
     }).observe(chatEl, { childList: true });
 }
 
 function refresh() {
     watchChat();
     renderBadges();
+    renderFooters();
     renderPanel();
     if (hasChat()) updateInjection(currentState());
     else updateInjection([]);
@@ -776,6 +895,8 @@ function buildSettings() {
                 <label class="checkbox_label"><input type="checkbox" data-key="enabled"> Enabled</label>
                 <label class="checkbox_label"><input type="checkbox" data-key="autoCheck"> Check automatically after each reply</label>
                 <label class="checkbox_label"><input type="checkbox" data-key="badges"> Show status icons on portraits</label>
+                <label class="checkbox_label"><input type="checkbox" data-key="footers"> Show changes under each message</label>
+                <label class="checkbox_label"><input type="checkbox" data-key="toasts"> Also show changes as pop-ups</label>
                 <label>Messages the check reads <input class="text_pole" type="number" min="2" max="20" data-key="contextMessages"></label>
                 <label>Max stage change per reply (0 = no limit) <input class="text_pole" type="number" min="0" max="10" data-key="maxStep"></label>
                 <label>Reminder depth in chat <input class="text_pole" type="number" min="0" max="10" data-key="injectDepth"></label>
@@ -900,11 +1021,18 @@ function wireEvents() {
 
 // Tapping a badge opens that effect in the panel (and not the avatar zoom).
 document.addEventListener('click', (event) => {
-    const badge = event.target.closest?.('.sfx-badge');
-    if (!badge) return;
+    const el = event.target.closest?.('.sfx-badge, .sfx-chip');
+    if (!el) return;
     event.preventDefault();
     event.stopPropagation();
-    openEffect(badge.dataset.sfxId);
+    if (el.dataset.sfxAct === 'recheck') {
+        const mes = el.closest('.mes');
+        const index = Number(mes?.getAttribute('mesid'));
+        if (Number.isInteger(index)) runCheck(index, true);
+        return;
+    }
+    if (el.classList.contains('sfx-chip-wait')) return;
+    openEffect(el.dataset.sfxId);
 }, true);
 
 jQuery(() => {
