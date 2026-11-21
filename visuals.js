@@ -4,7 +4,7 @@
 // which sets how visible the layer is, how fast it moves and, for some,
 // how many particles appear.
 
-export const VISUALS_VERSION = '1.9.0';
+export const VISUALS_VERSION = '1.9.1';
 
 export const VISUALS = [
     { key: 'spiral', place: 'under', label: 'Hypnotic spiral', hint: 'hypnosis, trance, suggestion, mind control', words: ['hypno', 'trance', 'mesmer', 'pendulum', 'suggestion', 'mind control', 'brainwash', 'obedien'], min: 0.07, max: 0.32, slow: 22, fast: 2.6 },
@@ -214,7 +214,14 @@ function makeLayer(v) {
         }
         el.append(ring, ...parts, sparks);
         // Each time the ring reaches the centre: the impact, and a word if there are any.
-        ring.addEventListener('animationiteration', () => {
+        let lastHit = 0;
+        ring.addEventListener('animationiteration', (event) => {
+            // Only the ring's own animation counts: its brighter glow copy runs
+            // on the same timing and would otherwise fire a second hit.
+            if (event.pseudoElement || event.animationName !== 'sfx-converge') return;
+            const now = performance.now();
+            if (now - lastHit < 400) return;
+            lastHit = now;
             el.classList.remove('sfx-go');
             void el.offsetWidth;
             el.classList.add('sfx-go');

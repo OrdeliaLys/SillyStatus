@@ -7,7 +7,7 @@
 
 import { VISUALS, VISUALS_VERSION, isVisual, visualLabel, guessVisual, renderVisuals, tintInfo } from './visuals.js';
 
-const VERSION = '1.9.0';
+const VERSION = '1.9.1';
 
 // Status icons: shown in the panel and on the affected character's portrait.
 const ICONS = [
