@@ -7,7 +7,7 @@
 
 import { VISUALS, VISUALS_VERSION, isVisual, visualLabel, guessVisual, renderVisuals, tintInfo } from './visuals.js';
 
-const VERSION = '1.8.0';
+const VERSION = '1.8.1';
 
 // Status icons: shown in the panel and on the affected character's portrait.
 const ICONS = [
@@ -817,7 +817,14 @@ function watchChat() {
     }).observe(chatEl, { childList: true });
 }
 
+// Lets other extensions (like Scene Backdrop) read the active effects.
+globalThis.SillyStatus = {
+    version: VERSION,
+    getEffects: () => (settings().enabled && hasChat() ? currentState() : []),
+};
+
 function refresh() {
+    queueMicrotask(() => document.dispatchEvent(new CustomEvent('sillystatus:changed')));
     watchChat();
     renderBadges();
     renderFooters();
