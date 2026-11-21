@@ -7,7 +7,7 @@
 
 import { VISUALS, VISUALS_VERSION, isVisual, visualLabel, guessVisual, renderVisuals, tintInfo } from './visuals.js';
 
-const VERSION = '1.8.1';
+const VERSION = '1.9.0';
 
 // Status icons: shown in the panel and on the affected character's portrait.
 const ICONS = [
@@ -46,6 +46,7 @@ const DEFAULTS = {
     ringVibrate: false,
     badges: true,
     footers: true,
+    sendCast: true,
     toasts: false,
 };
 
@@ -55,6 +56,7 @@ WHAT COUNTS AS AN EFFECT
 Lasting conditions that build, fade or matter later: hypnosis, mind control, conditioning, training, transformations, curses, corruption, possession, addictions, injuries, illnesses, buffs and debuffs, magical marks, bonds, lasting fear or trust. Not single actions, passing moods or things that are over within the scene.
 
 RULES
+- Write about each character with the gender and pronouns their own description in CAST gives. Never infer gender from appearance, clothing or behaviour: a femboy, a feminine man, a tomboy or an androgynous character keeps the gender and pronouns their description states. If a description doesn't say, follow how the story refers to them, and when unsure use their name instead of a pronoun.
 - Only report what the story actually shows. Most replies change nothing; then return {"changes": []}.
 - Stages are whole numbers from 0 to max. A new effect usually starts at stage 1. Pick a max of 5 to 10 that fits how long it should take.
 - Change a stage by 1 when an effect clearly advances or is resisted or treated.
@@ -254,6 +256,48 @@ function cleanMessage(mes) {
     return String(mes ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 2500);
 }
 
+// Who's who: the player's persona and the chat's character cards, shortened.
+// Sent so effects are written about the right people with the right
+// pronouns. Kept in the system message, which stays the same from check to
+// check, so providers with prompt caching (like DeepSeek) charge little for it.
+function shorten(text, limit) {
+    const t = String(text ?? '').replace(/\s+/g, ' ').trim();
+    if (t.length <= limit) return t;
+    const cut = t.slice(0, limit);
+    const end = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('! '), cut.lastIndexOf('? '));
+    return `${end > limit * 0.5 ? cut.slice(0, end + 1) : cut}…`;
+}
+
+function castBlock() {
+    const c = ctx();
+    if (!settings().sendCast) return '';
+    const fill = (text, charName) => {
+        const t = String(text ?? '');
+        try {
+            if (c.substituteParams) return c.substituteParams(t, c.name1, charName);
+        } catch { /* fall back below */ }
+        return t.replace(/{{user}}/gi, c.name1 ?? 'User').replace(/{{char}}/gi, charName ?? '');
+    };
+    const lines = [];
+    const persona = c.powerUserSettings?.persona_description;
+    if (c.name1) lines.push(`- ${c.name1} (the player): ${persona ? shorten(fill(persona, c.name2), 700) : 'no description'}`);
+    const cards = [];
+    if (c.groupId) {
+        const group = c.groups?.find(g => g.id == c.groupId);
+        for (const avatar of group?.members ?? []) {
+            const ch = c.characters?.find(x => x.avatar === avatar);
+            if (ch) cards.push(ch);
+        }
+    } else if (c.characterId !== undefined && c.characterId !== null) {
+        const ch = c.characters?.[c.characterId];
+        if (ch) cards.push(ch);
+    }
+    for (const ch of cards.slice(0, 6)) {
+        lines.push(`- ${ch.name}: ${shorten(fill(ch.description || ch.data?.description || ch.personality, ch.name), cards.length > 2 ? 350 : 500) || 'no description'}`);
+    }
+    return lines.length ? `\n\nCAST (from the persona and character cards):\n${lines.join('\n')}` : '';
+}
+
 function buildCheck(index, before) {
     const c = ctx();
     const s = settings();
@@ -268,7 +312,7 @@ function buildCheck(index, before) {
         ? JSON.stringify(before.map(({ id, name, target, stage, max, effects }) => ({ id, name, target, stage, max, effects })))
         : '[] (none yet)';
     const user = `PLAYER CHARACTER: ${c.name1}\n\nCURRENT EFFECTS:\n${current}\n\nRECENT STORY (oldest first, the last message is the one to check):\n\n${lines.join('\n\n')}\n\nAnswer with the JSON now.`;
-    return { system: CHECK_PROMPT, user };
+    return { system: CHECK_PROMPT + castBlock(), user };
 }
 
 async function askModel({ system, user }) {
@@ -904,6 +948,7 @@ function buildSettings() {
                 <label class="checkbox_label"><input type="checkbox" data-key="badges"> Show status icons on portraits</label>
                 <label class="checkbox_label"><input type="checkbox" data-key="footers"> Show changes under each message</label>
                 <label class="checkbox_label"><input type="checkbox" data-key="toasts"> Also show changes as pop-ups</label>
+                <label class="checkbox_label"><input type="checkbox" data-key="sendCast"> Send persona and character descriptions to the check (for correct names and pronouns)</label>
                 <label>Messages the check reads <input class="text_pole" type="number" min="2" max="20" data-key="contextMessages"></label>
                 <label>Max stage change per reply (0 = no limit) <input class="text_pole" type="number" min="0" max="10" data-key="maxStep"></label>
                 <label>Reminder depth in chat <input class="text_pole" type="number" min="0" max="10" data-key="injectDepth"></label>
