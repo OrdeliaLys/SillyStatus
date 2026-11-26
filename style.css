@@ -924,3 +924,21 @@ body.sfx-thump #chat {
 .sfx-chip-end { opacity: 0.6; text-decoration: line-through; text-decoration-thickness: 1px; }
 .sfx-chip-wait { cursor: default; opacity: 0.8; }
 .sfx-chip-recheck { padding: 3px 9px; opacity: 0.7; }
+
+/* Stopping a check */
+.sfx-cancel {
+    margin-left: 8px;
+    padding: 2px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 999px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 0.85em;
+    cursor: pointer;
+}
+
+.sfx-chip-wait b {
+    margin-left: 4px;
+    opacity: 0.7;
+}

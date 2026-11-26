@@ -7,7 +7,7 @@
 
 import { VISUALS, VISUALS_VERSION, isVisual, visualLabel, guessVisual, renderVisuals, tintInfo } from './visuals.js';
 
-const VERSION = '1.9.1';
+const VERSION = '1.10.0';
 
 // Status icons: shown in the panel and on the affected character's portrait.
 const ICONS = [
@@ -36,6 +36,7 @@ const DEFAULTS = {
     enabled: true,
     autoCheck: true,
     contextMessages: 6,
+    checkTimeout: 120,    // seconds before a stuck check gives up
     maxStep: 1,
     injectDepth: 1,
     side: 'left',
@@ -80,6 +81,7 @@ ANSWER WITH JSON ONLY, in this shape:
 
 let busy = false;
 let checkingIndex = null;
+let stopCheck = null; // ends the running check early (time limit or cancel)
 let pending = null;
 let armed = false;
 let openId = null;
@@ -315,13 +317,38 @@ function buildCheck(index, before) {
     return { system: CHECK_PROMPT + castBlock(), user };
 }
 
+// Room for a thinking model (like DeepSeek V4 Pro) to reason and still answer.
+const CHECK_LENGTH = 2000;
+
 async function askModel({ system, user }) {
     const c = ctx();
     const chatCompletion = (c.mainApi ?? 'openai') === 'openai';
     if (chatCompletion) {
-        return await c.generateRaw({ prompt: [{ role: 'system', content: system }, { role: 'user', content: user }] });
+        return await c.generateRaw({ prompt: [{ role: 'system', content: system }, { role: 'user', content: user }], responseLength: CHECK_LENGTH });
     }
-    return await c.generateRaw({ systemPrompt: system, prompt: user });
+    return await c.generateRaw({ systemPrompt: system, prompt: user, responseLength: CHECK_LENGTH });
+}
+
+// Waits for the answer, but never forever: on phones a request can silently
+// die (screen off, app switched, network blip) and would otherwise leave the
+// check spinning and block every later one. Also ends early on cancel.
+function askWithLimit(prompt) {
+    const seconds = Math.max(20, Number(settings().checkTimeout) || 120);
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+            stopCheck = null;
+            reject(Object.assign(new Error('timeout'), { kind: 'timeout', seconds }));
+        }, seconds * 1000);
+        stopCheck = () => {
+            clearTimeout(timer);
+            stopCheck = null;
+            reject(Object.assign(new Error('cancelled'), { kind: 'cancelled' }));
+        };
+        askModel(prompt).then(
+            (v) => { clearTimeout(timer); stopCheck = null; resolve(v); },
+            (e) => { clearTimeout(timer); stopCheck = null; reject(e); },
+        );
+    });
 }
 
 function parseAnswer(raw) {
@@ -412,7 +439,7 @@ async function runCheck(index, manual = false) {
     renderFooters();
     try {
         const before = stateBefore(index);
-        const raw = await askModel(buildCheck(index, before));
+        const raw = await askWithLimit(buildCheck(index, before));
         if (chatKey() !== key || ctx().chat?.[index] !== msg) return; // chat changed meanwhile
         const answer = parseAnswer(raw);
         if (!answer) {
@@ -425,11 +452,18 @@ async function runCheck(index, manual = false) {
         if (log.length && s.toasts) toast('info', log.join('<br>'));
         else if (manual && !log.length) toast('info', 'No changes.');
     } catch (err) {
-        console.error('[Status Effects] check failed', err);
-        toast('error', `Check failed: ${err?.message ?? err}`);
+        if (err?.kind === 'timeout') {
+            toast('warning', `The status check got no answer for ${err.seconds} seconds, so it was stopped and nothing changed. Tap ↻ under the reply to try again.`);
+        } else if (err?.kind === 'cancelled') {
+            toast('info', 'Status check cancelled. Nothing changed.');
+        } else {
+            console.error('[Status Effects] check failed', err);
+            toast('error', `Check failed: ${err?.message ?? err}`);
+        }
     } finally {
         busy = false;
         checkingIndex = null;
+        stopCheck = null;
         refresh();
         if (pending !== null) {
             const p = pending;
@@ -568,7 +602,7 @@ function renderPanel() {
     if (!list.length && editing !== 'new') {
         html += '<div class="sfx-empty">No active effects. They appear here when the story starts one, or tap + to add one.</div>';
     }
-    if (busy) html += '<div class="sfx-empty"><i class="fa-solid fa-spinner fa-spin"></i> Checking the last reply…</div>';
+    if (busy) html += '<div class="sfx-empty"><i class="fa-solid fa-spinner fa-spin"></i> Checking the last reply… <button type="button" class="sfx-cancel" data-sfx-cancel>Stop</button></div>';
     box.innerHTML = html;
 }
 
@@ -809,7 +843,7 @@ function renderFooters() {
         let html = '';
         if (on && msg) {
             if (index === checkingIndex) {
-                html = '<span class="sfx-chip sfx-chip-wait"><i class="fa-solid fa-spinner fa-spin"></i> Checking status effects…</span>';
+                html = '<button type="button" class="sfx-chip sfx-chip-wait" data-sfx-act="cancel" title="Stop this check"><i class="fa-solid fa-spinner fa-spin"></i> Checking status effects… <b>✕</b></button>';
             } else {
                 const own = ownState(msg);
                 if (own) {
@@ -950,6 +984,7 @@ function buildSettings() {
                 <label class="checkbox_label"><input type="checkbox" data-key="toasts"> Also show changes as pop-ups</label>
                 <label class="checkbox_label"><input type="checkbox" data-key="sendCast"> Send persona and character descriptions to the check (for correct names and pronouns)</label>
                 <label>Messages the check reads <input class="text_pole" type="number" min="2" max="20" data-key="contextMessages"></label>
+                <label>Give up on a check after (seconds) <input class="text_pole" type="number" min="20" max="600" data-key="checkTimeout"></label>
                 <label>Max stage change per reply (0 = no limit) <input class="text_pole" type="number" min="0" max="10" data-key="maxStep"></label>
                 <label>Reminder depth in chat <input class="text_pole" type="number" min="0" max="10" data-key="injectDepth"></label>
                 <label>Button side
@@ -1071,12 +1106,23 @@ function wireEvents() {
     }
 }
 
+document.addEventListener('click', (event) => {
+    if (!event.target.closest?.('[data-sfx-cancel]')) return;
+    event.preventDefault();
+    event.stopPropagation();
+    stopCheck?.();
+}, true);
+
 // Tapping a badge opens that effect in the panel (and not the avatar zoom).
 document.addEventListener('click', (event) => {
     const el = event.target.closest?.('.sfx-badge, .sfx-chip');
     if (!el) return;
     event.preventDefault();
     event.stopPropagation();
+    if (el.dataset.sfxAct === 'cancel') {
+        stopCheck?.();
+        return;
+    }
     if (el.dataset.sfxAct === 'recheck') {
         const mes = el.closest('.mes');
         const index = Number(mes?.getAttribute('mesid'));
